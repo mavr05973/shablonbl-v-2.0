@@ -87,7 +87,7 @@
         }
         .search-box input::placeholder { color: var(--text-secondary); }
         
-        .theme-toggle, .clear-favs-btn, .add-template-btn, .reset-stats-btn {
+        .theme-toggle, .clear-favs-btn, .add-template-btn, .reset-stats-btn, .backup-btn, .restore-btn, .feedback-btn {
             background: var(--btn-bg);
             border: 1px solid var(--btn-border);
             border-radius: 40px;
@@ -97,6 +97,12 @@
             color: var(--text-primary);
             transition: 0.1s;
         }
+        .feedback-btn { background: var(--accent); color: white; border-color: var(--accent); }
+        .feedback-btn:hover { background: var(--accent-hover); }
+        .backup-btn { background: #2c9b7a; color: white; border-color: #2c9b7a; }
+        .backup-btn:hover { background: #25835e; }
+        .restore-btn { background: #0d6efd; color: white; border-color: #0d6efd; }
+        .restore-btn:hover { background: #0b5ed7; }
         .reset-stats-btn { background: #dc3545; color: white; border-color: #dc3545; }
         .reset-stats-btn:hover { background: #c82333; }
         .theme-toggle:hover, .clear-favs-btn:hover, .add-template-btn:hover { background: var(--btn-hover); }
@@ -350,60 +356,6 @@
         }
         
         footer { text-align: center; margin-top: 40px; color: var(--text-secondary); font-size: 0.85rem; }
-        /* Исправление цветов в опроснике */
-.feedback-form select,
-.feedback-form input,
-.feedback-form textarea,
-.feedback-form option {
-    color: #1e2f3f !important;
-    background-color: #ffffff !important;
-    border: 1px solid #cde1ed !important;
-}
-
-body.dark .feedback-form select,
-body.dark .feedback-form input,
-body.dark .feedback-form textarea,
-body.dark .feedback-form option {
-    color: #e2e8f0 !important;
-    background-color: #2a3f4f !important;
-    border: 1px solid #3d5a6e !important;
-}
-        /* ========== КНОПКИ ОПРОСНИКА ========== */
-.feedback-btn {
-    background: var(--accent);
-    color: white;
-    border: none;
-    transition: 0.1s;
-}
-.feedback-btn:hover {
-    background: var(--accent-hover);
-}
-
-.submit-feedback {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 40px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.1s;
-}
-.submit-feedback:hover {
-    background: var(--accent-hover);
-}
-
-/* Кнопка закрытия модального окна */
-.close-modal {
-    background: none;
-    border: none;
-    font-size: 30px;
-    cursor: pointer;
-    color: var(--text-secondary);
-}
-.close-modal:hover {
-    color: var(--accent);
-}
     </style>
 </head>
 <body>
@@ -414,6 +366,8 @@ body.dark .feedback-form option {
             <input type="text" id="searchInput" placeholder="Поиск по названию или тексту...">
         </div>
         <button id="feedbackBtn" class="feedback-btn">📝 Оставить отзыв</button>
+        <button id="backupBtn" class="backup-btn">💾 Бэкап</button>
+        <button id="restoreBtn" class="restore-btn">🔄 Восстановить</button>
         <button class="theme-toggle" id="themeToggle">🌙 Тёмная тема</button>
         <button class="clear-favs-btn" id="clearFavsBtn">🗑️ Очистить избранное</button>
         <button class="add-template-btn" id="addTemplateBtn">➕ Свой шаблон</button>
@@ -472,9 +426,28 @@ body.dark .feedback-form option {
     </div>
 </div>
 
+<!-- Модальное окно опросника -->
+<div id="feedbackModal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>📝 Обратная связь</h3>
+            <button class="close-modal" id="closeFeedbackModal">✕</button>
+        </div>
+        <div class="modal-body">
+            <div style="text-align: center; padding: 20px;">
+                <p style="margin-bottom: 20px;">Пожалуйста, уделите 1 минуту, чтобы ответить на несколько вопросов — это поможет нам сделать инструмент лучше.</p>
+                <a href="https://forms.gle/iFgPGqbNenSjSZUT7" target="_blank" class="submit-feedback" style="display: inline-block; text-decoration: none;">📝 Перейти к опросу</a>
+                <div style="margin-top: 20px;">
+                    <button class="close-modal" id="closeModalBtn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer;">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // ==========================================
-    // ПОЛНАЯ ВЕРСИЯ — ВСЕ ШАБЛОНЫ ИЗ EXCEL (БЕЗ СОКРАЩЕНИЙ)
+    // ПОЛНАЯ ВЕРСИЯ — ВСЕ ШАБЛОНЫ ИЗ EXCEL
     // ==========================================
     const templatesData = {
         agent: [
@@ -633,7 +606,7 @@ body.dark .feedback-form option {
     };
     
     // ==========================================
-    // ДАЛЕЕ ВЕСЬ JS КОД (функции рендеринга, модалки, избранное, статистика и т.д.)
+    // ВСЕ ФУНКЦИИ (рендеринг, избранное, статистика, бэкап)
     // ==========================================
     let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
     let darkMode = localStorage.getItem('darkMode') === 'true';
@@ -641,7 +614,6 @@ body.dark .feedback-form option {
     let customTemplates = JSON.parse(localStorage.getItem('customTemplates') || '[]');
     let counters = JSON.parse(localStorage.getItem('templateCounters') || '{}');
     
-    // Элементы
     const agentGrid = document.getElementById('agentGrid');
     const sellerGrid = document.getElementById('sellerGrid');
     const leadGrid = document.getElementById('leadGrid');
@@ -656,6 +628,8 @@ body.dark .feedback-form option {
     const statsContent = document.getElementById('statsContent');
     const statsHeader = document.getElementById('statsHeader');
     const statsToggleIcon = document.getElementById('statsToggleIcon');
+    const backupBtn = document.getElementById('backupBtn');
+    const restoreBtn = document.getElementById('restoreBtn');
     
     statsContent.classList.add('open');
     statsToggleIcon.innerHTML = '▲';
@@ -768,6 +742,53 @@ body.dark .feedback-form option {
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);
     }
+    
+    // Бэкап и восстановление
+    function backupData() {
+        const data = {
+            favorites: localStorage.getItem('favorites'),
+            customTemplates: localStorage.getItem('customTemplates'),
+            templateCounters: localStorage.getItem('templateCounters'),
+            darkMode: localStorage.getItem('darkMode'),
+            feedbackResponded: localStorage.getItem('feedbackResponded'),
+            feedbackLastShown: localStorage.getItem('feedbackLastShown')
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `shablony_backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast('💾 Бэкап сохранён');
+    }
+    
+    function restoreData() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/json';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const text = await file.text();
+            try {
+                const data = JSON.parse(text);
+                if (data.favorites) localStorage.setItem('favorites', data.favorites);
+                if (data.customTemplates) localStorage.setItem('customTemplates', data.customTemplates);
+                if (data.templateCounters) localStorage.setItem('templateCounters', data.templateCounters);
+                if (data.darkMode) localStorage.setItem('darkMode', data.darkMode);
+                if (data.feedbackResponded) localStorage.setItem('feedbackResponded', data.feedbackResponded);
+                if (data.feedbackLastShown) localStorage.setItem('feedbackLastShown', data.feedbackLastShown);
+                showToast('✅ Данные восстановлены! Страница обновится...');
+                setTimeout(() => location.reload(), 1500);
+            } catch (err) {
+                showToast('❌ Ошибка: неверный файл бэкапа');
+            }
+        };
+        input.click();
+    }
+    
+    backupBtn?.addEventListener('click', backupData);
+    restoreBtn?.addEventListener('click', restoreData);
     
     const modal = document.getElementById('modalRoot');
     const modalTitle = document.getElementById('modalTitle');
@@ -1039,94 +1060,26 @@ body.dark .feedback-form option {
         });
     });
     
-    renderAll();
-    // ========== ОПРОСНИК (раз в неделю, пока не ответят) ==========
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7cGpAaKCx7-ZYsW1uQyxdCsVR2STSlM4Tusj08KHWxaqMQJJO126m3WEpFj6T51tN/exec';
+    // Опросник
+    const feedbackBtn = document.getElementById('feedbackBtn');
+    const feedbackModal = document.getElementById('feedbackModal');
+    const closeFeedbackModal = document.getElementById('closeFeedbackModal');
+    const closeModalBtnManual = document.getElementById('closeModalBtn');
     
     function showFeedbackModal() {
-        const modal = document.getElementById('feedbackModal');
-        if (modal) modal.style.display = 'flex';
+        if (feedbackModal) feedbackModal.style.display = 'flex';
     }
     
-    function closeFeedbackModal() {
-        const modal = document.getElementById('feedbackModal');
-        if (modal) modal.style.display = 'none';
-    }
+    feedbackBtn?.addEventListener('click', showFeedbackModal);
+    closeFeedbackModal?.addEventListener('click', () => { if (feedbackModal) feedbackModal.style.display = 'none'; });
+    closeModalBtnManual?.addEventListener('click', () => { if (feedbackModal) feedbackModal.style.display = 'none'; });
+    window.addEventListener('click', (e) => { if (e.target === feedbackModal) feedbackModal.style.display = 'none'; });
     
-    // Кнопка открытия
-    const feedbackBtn = document.getElementById('feedbackBtn');
-    if (feedbackBtn) {
-        feedbackBtn.addEventListener('click', showFeedbackModal);
-    }
-    
-    // Закрытие по крестику
-    const closeFeedback = document.getElementById('closeFeedbackModal');
-    if (closeFeedback) {
-        closeFeedback.addEventListener('click', closeFeedbackModal);
-    }
-    
-    // Закрытие по клику на фон
-    window.addEventListener('click', (e) => {
-        const modal = document.getElementById('feedbackModal');
-        if (e.target === modal) closeFeedbackModal();
-    });
-    
-   // Отправка формы
-const feedbackForm = document.getElementById('feedbackForm');
-if (feedbackForm) {
-    feedbackForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const frequency = document.getElementById('frequency').value;
-        const usefulness = document.querySelector('input[name="usefulness"]:checked')?.value;
-        const ease = document.querySelector('input[name="ease"]:checked')?.value;
-        
-        if (!frequency || !usefulness || !ease) {
-            showToast('❌ Пожалуйста, ответьте на все обязательные вопросы');
-            return;
-        }
-        
-        const data = {
-            frequency,
-            usefulness,
-            ease,
-            likes: document.getElementById('likes').value,
-            improvements: document.getElementById('improvements').value,
-            name: document.getElementById('name').value
-        };
-        
-        try {
-            // Используем обычный fetch без no-cors, чтобы получить ответ
-            const response = await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (result.result === 'ok') {
-                showToast('✅ Спасибо! Отзыв отправлен');
-                feedbackForm.reset();
-                closeFeedbackModal();
-                localStorage.setItem('feedbackResponded', 'true');
-            } else {
-                showToast('❌ Ошибка: ' + (result.message || 'Неизвестная ошибка'));
-            }
-        } catch (err) {
-            console.error('Ошибка отправки:', err);
-            showToast('❌ Ошибка отправки. Попробуйте позже');
-        }
-    });
-}
-    
-    // Автопоказ раз в неделю, если ещё не отвечали
     const hasResponded = localStorage.getItem('feedbackResponded') === 'true';
     if (!hasResponded) {
         const lastShown = localStorage.getItem('feedbackLastShown');
         const now = Date.now();
         const oneWeek = 7 * 24 * 60 * 60 * 1000;
-        
         if (!lastShown || (now - parseInt(lastShown) > oneWeek)) {
             setTimeout(() => {
                 showFeedbackModal();
@@ -1134,31 +1087,8 @@ if (feedbackForm) {
             }, 5000);
         }
     }
-    function showToast(msg) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = msg;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2000);
-}
+    
+    renderAll();
 </script>
-<!-- Модальное окно опросника -->
-<div id="feedbackModal" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-header">
-            <h3>📝 Обратная связь</h3>
-            <button class="close-modal" id="closeFeedbackModal">✕</button>
-        </div>
-        <div class="modal-body">
-            <div style="text-align: center; padding: 20px;">
-                <p style="margin-bottom: 20px;">Пожалуйста, уделите 1 минуту, чтобы ответить на несколько вопросов — это поможет нам сделать инструмент лучше.</p>
-                <a id="feedbackLink" href="https://forms.gle/iFgPGqbNenSjSZUT7" target="_blank" class="submit-feedback" style="display: inline-block; text-decoration: none;">📝 Перейти к опросу</a>
-                <div style="margin-top: 20px;">
-                    <button class="close-modal" id="closeModalBtn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer;">Закрыть</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 </body>
 </html>
