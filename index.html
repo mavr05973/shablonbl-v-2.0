@@ -1071,47 +1071,54 @@ body.dark .feedback-form option {
         if (e.target === modal) closeFeedbackModal();
     });
     
-    // Отправка формы
-    const feedbackForm = document.getElementById('feedbackForm');
-    if (feedbackForm) {
-        feedbackForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+   // Отправка формы
+const feedbackForm = document.getElementById('feedbackForm');
+if (feedbackForm) {
+    feedbackForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const frequency = document.getElementById('frequency').value;
+        const usefulness = document.querySelector('input[name="usefulness"]:checked')?.value;
+        const ease = document.querySelector('input[name="ease"]:checked')?.value;
+        
+        if (!frequency || !usefulness || !ease) {
+            showToast('❌ Пожалуйста, ответьте на все обязательные вопросы');
+            return;
+        }
+        
+        const data = {
+            frequency,
+            usefulness,
+            ease,
+            likes: document.getElementById('likes').value,
+            improvements: document.getElementById('improvements').value,
+            name: document.getElementById('name').value
+        };
+        
+        try {
+            // Используем обычный fetch без no-cors, чтобы получить ответ
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
             
-            const frequency = document.getElementById('frequency').value;
-            const usefulness = document.querySelector('input[name="usefulness"]:checked')?.value;
-            const ease = document.querySelector('input[name="ease"]:checked')?.value;
+            const result = await response.json();
             
-            if (!frequency || !usefulness || !ease) {
-                alert('❌ Пожалуйста, ответьте на все обязательные вопросы');
-                return;
-            }
-            
-            const data = {
-                frequency,
-                usefulness,
-                ease,
-                likes: document.getElementById('likes').value,
-                improvements: document.getElementById('improvements').value,
-                name: document.getElementById('name').value
-            };
-            
-            try {
-                await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                
-                alert('✅ Спасибо! Отзыв отправлен');
+            if (result.result === 'ok') {
+                showToast('✅ Спасибо! Отзыв отправлен');
                 feedbackForm.reset();
                 closeFeedbackModal();
                 localStorage.setItem('feedbackResponded', 'true');
-            } catch (err) {
-                alert('❌ Ошибка отправки. Попробуйте позже');
+            } else {
+                showToast('❌ Ошибка: ' + (result.message || 'Неизвестная ошибка'));
             }
-        });
-    }
+        } catch (err) {
+            console.error('Ошибка отправки:', err);
+            showToast('❌ Ошибка отправки. Попробуйте позже');
+        }
+    });
+}
     
     // Автопоказ раз в неделю, если ещё не отвечали
     const hasResponded = localStorage.getItem('feedbackResponded') === 'true';
@@ -1127,6 +1134,13 @@ body.dark .feedback-form option {
             }, 5000);
         }
     }
+    function showToast(msg) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
 </script>
 <!-- Модальное окно опросника -->
 <div id="feedbackModal" class="modal-overlay">
