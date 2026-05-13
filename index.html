@@ -986,5 +986,170 @@
     
     renderAll();
 </script>
+    <!-- Кнопка и опросник -->
+<style>
+.feedback-btn { background: var(--accent); color: white; border-color: var(--accent); }
+.feedback-btn:hover { background: var(--accent-hover); }
+.feedback-form { display: flex; flex-direction: column; gap: 20px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-weight: 600; color: var(--accent); }
+.form-group select, .form-group input, .form-group textarea {
+    background: var(--btn-bg);
+    border: 1px solid var(--btn-border);
+    border-radius: 16px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-family: inherit;
+}
+.rating-group { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.rating-group label { display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer; }
+.submit-feedback { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 40px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+.dont-show { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.8rem; }
+</style>
+
+<!-- Модальное окно опроса -->
+<div id="feedbackModal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>📝 Обратная связь</h3>
+            <button class="close-modal" id="closeFeedbackModal">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="feedbackForm" class="feedback-form">
+                <div class="form-group">
+                    <label>Как часто вы используете шаблоны? *</label>
+                    <select id="frequency" required>
+                        <option value="">Выберите...</option>
+                        <option value="Каждый день">Каждый день</option>
+                        <option value="Несколько раз в неделю">Несколько раз в неделю</option>
+                        <option value="Раз в неделю">Раз в неделю</option>
+                        <option value="Реже">Реже</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Насколько инструмент помогает вам в работе? (1–5) *</label>
+                    <div class="rating-group">
+                        <label><input type="radio" name="usefulness" value="1"> 1</label>
+                        <label><input type="radio" name="usefulness" value="2"> 2</label>
+                        <label><input type="radio" name="usefulness" value="3"> 3</label>
+                        <label><input type="radio" name="usefulness" value="4"> 4</label>
+                        <label><input type="radio" name="usefulness" value="5"> 5</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Насколько удобно пользоваться? (1–5) *</label>
+                    <div class="rating-group">
+                        <label><input type="radio" name="ease" value="1"> 1</label>
+                        <label><input type="radio" name="ease" value="2"> 2</label>
+                        <label><input type="radio" name="ease" value="3"> 3</label>
+                        <label><input type="radio" name="ease" value="4"> 4</label>
+                        <label><input type="radio" name="ease" value="5"> 5</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Что особенно нравится?</label>
+                    <textarea id="likes" rows="3" placeholder="Удобный поиск, много вариантов, тёмная тема..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Что можно улучшить или добавить?</label>
+                    <textarea id="improvements" rows="3" placeholder="Больше шаблонов, экспорт, группировка..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Ваше имя или отдел (необязательно)</label>
+                    <input type="text" id="name" placeholder="Агент, Селлер...">
+                </div>
+                <div class="dont-show">
+                    <input type="checkbox" id="dontShowAgain">
+                    <label>Больше не показывать это окно</label>
+                </div>
+                <button type="submit" class="submit-feedback">📤 Отправить отзыв</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyqS2r9wTw0GNg3TGc0VgJK6vQ5lfkzgiseIRsKdrUOM7HD_KISdmDYpaN-N4sZsBiv/exec';
+    
+    // Проверяем, нужно ли показывать опросник
+    let feedbackDisabled = localStorage.getItem('feedbackDisabled') === 'true';
+    
+    // Добавляем кнопку в панель
+    const topBar = document.querySelector('.top-bar');
+    if (topBar && !document.getElementById('feedbackBtn')) {
+        const btn = document.createElement('button');
+        btn.id = 'feedbackBtn';
+        btn.className = 'feedback-btn';
+        btn.innerHTML = '📝 Оставить отзыв';
+        topBar.insertBefore(btn, topBar.firstChild);
+    }
+    
+    // Обработчики
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'feedbackBtn') {
+            document.getElementById('feedbackModal').style.display = 'flex';
+        }
+    });
+    
+    document.getElementById('closeFeedbackModal')?.addEventListener('click', () => {
+        document.getElementById('feedbackModal').style.display = 'none';
+    });
+    
+    window.addEventListener('click', (e) => {
+        if (e.target === document.getElementById('feedbackModal')) {
+            document.getElementById('feedbackModal').style.display = 'none';
+        }
+    });
+    
+    document.getElementById('feedbackForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const frequency = document.getElementById('frequency').value;
+        const usefulness = document.querySelector('input[name="usefulness"]:checked')?.value;
+        const ease = document.querySelector('input[name="ease"]:checked')?.value;
+        
+        if (!frequency || !usefulness || !ease) {
+            alert('❌ Пожалуйста, ответьте на все обязательные вопросы');
+            return;
+        }
+        
+        const data = {
+            frequency,
+            usefulness,
+            ease,
+            likes: document.getElementById('likes').value,
+            improvements: document.getElementById('improvements').value,
+            name: document.getElementById('name').value
+        };
+        
+        try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            alert('✅ Спасибо! Отзыв отправлен');
+            document.getElementById('feedbackForm').reset();
+            
+            if (document.getElementById('dontShowAgain').checked) {
+                localStorage.setItem('feedbackDisabled', 'true');
+            }
+            
+            document.getElementById('feedbackModal').style.display = 'none';
+        } catch (err) {
+            alert('❌ Ошибка отправки. Попробуйте позже');
+        }
+    });
+    
+    // Показываем через 5 секунд, если не отключён
+    if (!feedbackDisabled) {
+        setTimeout(() => {
+            const modal = document.getElementById('feedbackModal');
+            if (modal) modal.style.display = 'flex';
+        }, 5000);
+    }
+</script>
 </body>
 </html>
