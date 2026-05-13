@@ -1150,51 +1150,13 @@ if (feedbackForm) {
             <button class="close-modal" id="closeFeedbackModal">✕</button>
         </div>
         <div class="modal-body">
-            <form id="feedbackForm" class="feedback-form">
-                <div class="form-group">
-                    <label>Как часто вы используете шаблоны? *</label>
-                    <select id="frequency" required>
-                        <option value="">Выберите...</option>
-                        <option value="Каждый день">Каждый день</option>
-                        <option value="Несколько раз в неделю">Несколько раз в неделю</option>
-                        <option value="Раз в неделю">Раз в неделю</option>
-                        <option value="Реже">Реже</option>
-                    </select>
+            <div style="text-align: center; padding: 20px;">
+                <p style="margin-bottom: 20px;">Пожалуйста, уделите 1 минуту, чтобы ответить на несколько вопросов — это поможет нам сделать инструмент лучше.</p>
+                <a id="feedbackLink" href="https://forms.gle/iFgPGqbNenSjSZUT7" target="_blank" class="submit-feedback" style="display: inline-block; text-decoration: none;">📝 Перейти к опросу</a>
+                <div style="margin-top: 20px;">
+                    <button class="close-modal" id="closeModalBtn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer;">Закрыть</button>
                 </div>
-                <div class="form-group">
-                    <label>Насколько инструмент помогает вам в работе? (1–5) *</label>
-                    <div class="rating-group">
-                        <label><input type="radio" name="usefulness" value="1"> 1</label>
-                        <label><input type="radio" name="usefulness" value="2"> 2</label>
-                        <label><input type="radio" name="usefulness" value="3"> 3</label>
-                        <label><input type="radio" name="usefulness" value="4"> 4</label>
-                        <label><input type="radio" name="usefulness" value="5"> 5</label>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Насколько удобно пользоваться? (1–5) *</label>
-                    <div class="rating-group">
-                        <label><input type="radio" name="ease" value="1"> 1</label>
-                        <label><input type="radio" name="ease" value="2"> 2</label>
-                        <label><input type="radio" name="ease" value="3"> 3</label>
-                        <label><input type="radio" name="ease" value="4"> 4</label>
-                        <label><input type="radio" name="ease" value="5"> 5</label>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Что особенно нравится?</label>
-                    <textarea id="likes" rows="3" placeholder="Удобный поиск, много вариантов, тёмная тема..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Что можно улучшить или добавить?</label>
-                    <textarea id="improvements" rows="3" placeholder="Больше шаблонов, экспорт, группировка..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Ваше имя или отдел (необязательно)</label>
-                    <input type="text" id="name" placeholder="КС,ПК">
-                </div>
-                <button type="submit" class="submit-feedback">📤 Отправить отзыв</button>
-            </form>
+            </div>
         </div>
     </div>
 </div>
