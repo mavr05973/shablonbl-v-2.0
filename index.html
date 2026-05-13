@@ -368,6 +368,42 @@ body.dark .feedback-form option {
     background-color: #2a3f4f !important;
     border: 1px solid #3d5a6e !important;
 }
+        /* ========== КНОПКИ ОПРОСНИКА ========== */
+.feedback-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    transition: 0.1s;
+}
+.feedback-btn:hover {
+    background: var(--accent-hover);
+}
+
+.submit-feedback {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 40px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.1s;
+}
+.submit-feedback:hover {
+    background: var(--accent-hover);
+}
+
+/* Кнопка закрытия модального окна */
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 30px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+.close-modal:hover {
+    color: var(--accent);
+}
     </style>
 </head>
 <body>
@@ -1141,7 +1177,7 @@ body.dark .feedback-form option {
                 </div>
                 <div class="form-group">
                     <label>Ваше имя или отдел (необязательно)</label>
-                    <input type="text" id="name" placeholder="Агент, Селлер...">
+                    <input type="text" id="name" placeholder="КС,ПК">
                 </div>
                 <button type="submit" class="submit-feedback">📤 Отправить отзыв</button>
             </form>
