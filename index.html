@@ -1522,7 +1522,7 @@ function showAdminDashboard() {
         showToast('📥 Экспорт завершён');
     });
     
-    // Очистка истории
+ // Очистка истории
     document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
         if (confirm('Очистить всю историю копирований?')) {
             localStorage.setItem('copyHistory', JSON.stringify([]));
@@ -1530,12 +1530,11 @@ function showAdminDashboard() {
             saveCounters();
             showToast('🗑️ История очищена');
             setTimeout(() => showAdminDashboard(), 500);
-        }
-    });
+        }  // ← закрывает if
+    });  // ← закрывает addEventListener
     
     // Модальное окно будет показано из обёртки
-}
-}
+}  // ← закрывает функцию showAdminDashboard
 
 // ========== УПРАВЛЕНИЕ МОДАЛЬНЫМ ОКНОМ РУКОВОДИТЕЛЯ ==========
 (function() {
