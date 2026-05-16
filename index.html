@@ -1533,37 +1533,38 @@ function showAdminDashboard() {
         }
     });
     
-    // Получаем модальное окно и показываем его
-const modalForShow = document.getElementById('adminDashboardModal');
-if (modalForShow) {
-    modalForShow.style.display = 'flex';
-}
+    // Показываем модальное окно
+    const modal = document.getElementById('adminDashboardModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
 }
 
-// ПОЛУЧАЕМ КНОПКИ (важно: после того как DOM загружен)
+// ПОЛУЧАЕМ ЭЛЕМЕНТЫ ДЛЯ УПРАВЛЕНИЯ МОДАЛЬНЫМ ОКНОМ
 const closeDashboardBtn = document.getElementById('closeAdminDashboardBtn');
-const adminDashboardModalElem = document.getElementById('adminDashboardModal');
+const dashboardModal = document.getElementById('adminDashboardModal');
 
 // Крестик закрытия
-if (closeDashboardBtn && adminDashboardModalElem) {
-    closeDashboardBtn.addEventListener('click', () => {
-        adminDashboardModalElem.style.display = 'none';
-    });
+if (closeDashboardBtn && dashboardModal) {
+    closeDashboardBtn.onclick = function() {
+        dashboardModal.style.display = 'none';
+    };
 }
 
 // Закрытие по клику на фон
-if (adminDashboardModalElem) {
-    adminDashboardModalElem.addEventListener('click', (e) => {
-        if (e.target === adminDashboardModalElem) {
-            adminDashboardModalElem.style.display = 'none';
+if (dashboardModal) {
+    dashboardModal.onclick = function(e) {
+        if (e.target === dashboardModal) {
+            dashboardModal.style.display = 'none';
         }
-    });
+    };
 }
 
-// Кнопка открытия (админ кнопка уже объявлена выше)
+// Кнопка открытия панели руководителя
 if (adminDashboardBtn) {
-    adminDashboardBtn.addEventListener('click', showAdminDashboard);
+    adminDashboardBtn.onclick = showAdminDashboard;
 }
+
 renderAll();
 </script>
 <!-- Модальное окно для дашборда руководителя -->
