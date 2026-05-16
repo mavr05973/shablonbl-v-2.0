@@ -663,6 +663,8 @@
     const statsToggleIcon = document.getElementById('statsToggleIcon');
     const backupBtn = document.getElementById('backupBtn');
     const restoreBtn = document.getElementById('restoreBtn');
+      const adminDashboardBtn = document.getElementById('adminDashboardBtn');
+    const adminDashboardModal = document.getElementById('adminDashboardModal');
     
     statsContent.classList.add('open');
     statsToggleIcon.innerHTML = '▲';
@@ -1382,184 +1384,187 @@ function renderAll() {
             micButton.title = 'Голосовой поиск (нажмите и говорите)';
         };
     })();
-       // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
-    
-// Функция для сохранения истории копирований
+      // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
    
-    function showAdminDashboard() {
-        const password = prompt('Введите пароль для доступа к панели руководителя:');
-        if (password !== 'admin123') {
-            showToast('❌ Неверный пароль');
-            return;
-        }
-        
-        // Получаем историю
-        const history = JSON.parse(localStorage.getItem('copyHistory') || '[]');
-        const totalCopies = history.length;
-        
-        // Статистика по дням
-        const daysMap = new Map();
-        history.forEach(h => {
-            const day = h.date.slice(0, 10);
-            daysMap.set(day, (daysMap.get(day) || 0) + 1);
-        });
-        const daysStats = Array.from(daysMap.entries()).sort().reverse().slice(0, 14);
-        
-        // Статистика по дням недели
-        const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-        const weekdayStats = [0, 0, 0, 0, 0, 0, 0];
-        history.forEach(h => {
-            const date = new Date(h.date);
-            let day = date.getDay();
-            day = day === 0 ? 6 : day - 1;
-            weekdayStats[day]++;
-        });
-        const maxWeekday = Math.max(...weekdayStats, 1);
-        
-        // Статистика по блокам
-        const blockStats = { agent: 0, seller: 0, lead: 0, incoming: 0, custom: 0 };
-        history.forEach(h => {
-            if (blockStats.hasOwnProperty(h.block)) blockStats[h.block]++;
-            else blockStats[h.block] = 1;
-        });
-        
-        // Топ шаблонов из истории
-        const templateMap = new Map();
-        history.forEach(h => {
-            const key = `${h.block}|${h.template}`;
-            templateMap.set(key, (templateMap.get(key) || 0) + 1);
-        });
-        const topTemplates = Array.from(templateMap.entries())
-            .map(([key, count]) => {
-                const [block, template] = key.split('|');
-                let blockIcon = '📌';
-                if (block === 'agent') blockIcon = '🤝';
-                else if (block === 'seller') blockIcon = '🏢';
-                else if (block === 'lead') blockIcon = '📌';
-                else if (block === 'incoming') blockIcon = '📨';
-                else if (block === 'custom') blockIcon = '✏️';
-                return { name: `${blockIcon} ${template}`, count };
-            })
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 10);
-        
-        const container = document.getElementById('adminDashboardContainer');
-        if (!container) return;
-        
-        container.innerHTML = `
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
-                <div class="stats-category" style="text-align: center;">
-                    <div style="font-size: 0.8rem;">📊 Всего копирований</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${totalCopies}</div>
-                </div>
-                <div class="stats-category" style="text-align: center;">
-                    <div style="font-size: 0.8rem;">⭐ Избранных шаблонов</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${favorites.length}</div>
-                </div>
-                <div class="stats-category" style="text-align: center;">
-                    <div style="font-size: 0.8rem;">✏️ Своих шаблонов</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${customTemplates.length}</div>
-                </div>
+function showAdminDashboard() {
+    const password = prompt('Введите пароль для доступа к панели руководителя:');
+    if (password !== 'admin123') {
+        showToast('❌ Неверный пароль');
+        return;
+    }
+    
+    // Получаем историю
+    const history = JSON.parse(localStorage.getItem('copyHistory') || '[]');
+    const totalCopies = history.length;
+    
+    // Статистика по дням
+    const daysMap = new Map();
+    history.forEach(h => {
+        const day = h.date.slice(0, 10);
+        daysMap.set(day, (daysMap.get(day) || 0) + 1);
+    });
+    const daysStats = Array.from(daysMap.entries()).sort().reverse().slice(0, 14);
+    
+    // Статистика по дням недели
+    const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    const weekdayStats = [0, 0, 0, 0, 0, 0, 0];
+    history.forEach(h => {
+        const date = new Date(h.date);
+        let day = date.getDay();
+        day = day === 0 ? 6 : day - 1;
+        weekdayStats[day]++;
+    });
+    const maxWeekday = Math.max(...weekdayStats, 1);
+    
+    // Статистика по блокам
+    const blockStats = { agent: 0, seller: 0, lead: 0, incoming: 0, custom: 0 };
+    history.forEach(h => {
+        if (blockStats.hasOwnProperty(h.block)) blockStats[h.block]++;
+        else blockStats[h.block] = 1;
+    });
+    
+    // Топ шаблонов из истории
+    const templateMap = new Map();
+    history.forEach(h => {
+        const key = `${h.block}|${h.template}`;
+        templateMap.set(key, (templateMap.get(key) || 0) + 1);
+    });
+    const topTemplates = Array.from(templateMap.entries())
+        .map(([key, count]) => {
+            const [block, template] = key.split('|');
+            let blockIcon = '📌';
+            if (block === 'agent') blockIcon = '🤝';
+            else if (block === 'seller') blockIcon = '🏢';
+            else if (block === 'lead') blockIcon = '📌';
+            else if (block === 'incoming') blockIcon = '📨';
+            else if (block === 'custom') blockIcon = '✏️';
+            return { name: `${blockIcon} ${template}`, count };
+        })
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+    
+    const container = document.getElementById('adminDashboardContainer');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div class="stats-category" style="text-align: center;">
+                <div style="font-size: 0.8rem;">📊 Всего копирований</div>
+                <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${totalCopies}</div>
             </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
-                <div class="stats-category">
-                    <div class="stats-category-title">📅 Копирования по дням (14 дней)</div>
-                    <div style="max-height: 200px; overflow-y: auto;">
-                        ${daysStats.map(d => `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);"><span>${d[0]}</span><span class="stat-count">${d[1]}</span></div>`).join('')}
-                        ${daysStats.length === 0 ? '<div style="padding: 12px; text-align: center;">Нет данных</div>' : ''}
-                    </div>
-                </div>
-                <div class="stats-category">
-                    <div class="stats-category-title">📆 Активность по дням недели</div>
-                    ${weekdays.map((name, i) => `
-                        <div style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
-                            <span style="width: 36px;">${name}</span>
-                            <span class="stat-count">${weekdayStats[i]}</span>
-                            <div style="flex: 1; background: var(--btn-bg); border-radius: 10px; overflow: hidden;">
-                                <div style="width: ${(weekdayStats[i] / maxWeekday) * 100}%; background: var(--accent); height: 8px;"></div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
+            <div class="stats-category" style="text-align: center;">
+                <div style="font-size: 0.8rem;">⭐ Избранных шаблонов</div>
+                <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${favorites.length}</div>
             </div>
-            
-            <div class="stats-category" style="margin-bottom: 20px;">
-                <div class="stats-category-title">📂 Копирования по блокам</div>
-                <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
-                    <div class="stat-item"><span>🤝 Агенту</span><span class="stat-count">${blockStats.agent || 0}</span></div>
-                    <div class="stat-item"><span>🏢 Селлеру</span><span class="stat-count">${blockStats.seller || 0}</span></div>
-                    <div class="stat-item"><span>📌 Лиды от АН</span><span class="stat-count">${blockStats.lead || 0}</span></div>
-                    <div class="stat-item"><span>📨 Входящие</span><span class="stat-count">${blockStats.incoming || 0}</span></div>
-                    <div class="stat-item"><span>✏️ Свои</span><span class="stat-count">${blockStats.custom || 0}</span></div>
-                </div>
+            <div class="stats-category" style="text-align: center;">
+                <div style="font-size: 0.8rem;">✏️ Своих шаблонов</div>
+                <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${customTemplates.length}</div>
             </div>
-            
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
             <div class="stats-category">
-                <div class="stats-category-title">🏆 Топ-10 копируемых шаблонов</div>
-                ${topTemplates.map(t => `<div class="stat-item" style="display: flex; justify-content: space-between;"><span>${escapeHtml(t.name)}</span><span class="stat-count">${t.count}</span></div>`).join('')}
-                ${topTemplates.length === 0 ? '<div style="padding: 12px; text-align: center;">Нет данных</div>' : ''}
+                <div class="stats-category-title">📅 Копирования по дням (14 дней)</div>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    ${daysStats.map(d => `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);"><span>${d[0]}</span><span class="stat-count">${d[1]}</span></div>`).join('')}
+                    ${daysStats.length === 0 ? '<div style="padding: 12px; text-align: center;">Нет данных</div>' : ''}
+                </div>
             </div>
-            
-            <div style="margin-top: 20px; text-align: center;">
-                <button id="exportStatsBtn" class="submit-feedback">📥 Экспорт истории (CSV)</button>
-                <button id="clearHistoryBtn" class="reset-stats-btn" style="margin-left: 12px;">🗑️ Очистить историю</button>
+            <div class="stats-category">
+                <div class="stats-category-title">📆 Активность по дням недели</div>
+                ${weekdays.map((name, i) => `
+                    <div style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
+                        <span style="width: 36px;">${name}</span>
+                        <span class="stat-count">${weekdayStats[i]}</span>
+                        <div style="flex: 1; background: var(--btn-bg); border-radius: 10px; overflow: hidden;">
+                            <div style="width: ${(weekdayStats[i] / maxWeekday) * 100}%; background: var(--accent); height: 8px;"></div>
+                        </div>
+                    </div>
+                `).join('')}
             </div>
-        `;
+        </div>
         
-        // Экспорт CSV
-        document.getElementById('exportStatsBtn')?.addEventListener('click', () => {
-            let csv = "\uFEFFДата,Шаблон,Блок\n";
-            history.forEach(h => {
-                csv += `"${h.date}","${escapeHtml(h.template)}","${h.block}"\n`;
-            });
-            const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `history_${new Date().toISOString().slice(0,10)}.csv`;
-            link.click();
-            URL.revokeObjectURL(link.href);
-            showToast('📥 Экспорт завершён');
-        });
+        <div class="stats-category" style="margin-bottom: 20px;">
+            <div class="stats-category-title">📂 Копирования по блокам</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+                <div class="stat-item"><span>🤝 Агенту</span><span class="stat-count">${blockStats.agent || 0}</span></div>
+                <div class="stat-item"><span>🏢 Селлеру</span><span class="stat-count">${blockStats.seller || 0}</span></div>
+                <div class="stat-item"><span>📌 Лиды от АН</span><span class="stat-count">${blockStats.lead || 0}</span></div>
+                <div class="stat-item"><span>📨 Входящие</span><span class="stat-count">${blockStats.incoming || 0}</span></div>
+                <div class="stat-item"><span>✏️ Свои</span><span class="stat-count">${blockStats.custom || 0}</span></div>
+            </div>
+        </div>
         
-        // Очистка истории
-        document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
-            if (confirm('Очистить всю историю копирований?')) {
-                localStorage.setItem('copyHistory', JSON.stringify([]));
-                counters = {};
-                saveCounters();
-                showToast('🗑️ История очищена');
-                setTimeout(() => showAdminDashboard(), 500);
-            }
-        });
+        <div class="stats-category">
+            <div class="stats-category-title">🏆 Топ-10 копируемых шаблонов</div>
+            ${topTemplates.map(t => `<div class="stat-item" style="display: flex; justify-content: space-between;"><span>${escapeHtml(t.name)}</span><span class="stat-count">${t.count}</span></div>`).join('')}
+            ${topTemplates.length === 0 ? '<div style="padding: 12px; text-align: center;">Нет данных</div>' : ''}
+        </div>
         
-        adminDashboardModal.style.display = 'flex';
-    }
+        <div style="margin-top: 20px; text-align: center;">
+            <button id="exportStatsBtn" class="submit-feedback">📥 Экспорт истории (CSV)</button>
+            <button id="clearHistoryBtn" class="reset-stats-btn" style="margin-left: 12px;">🗑️ Очистить историю</button>
+        </div>
+    `;
     
-     // ПОЛУЧАЕМ КНОПКУ (важно: после того как DOM загружен)
-    const adminDashboardBtn = document.getElementById('adminDashboardBtn');
-    const closeDashboardBtn = document.getElementById('closeAdminDashboardBtn');
-    
-    // Крестик закрытия
-    if (closeDashboardBtn) {
-        closeDashboardBtn.addEventListener('click', () => {
-            if (adminDashboardModal) adminDashboardModal.style.display = 'none';
+    // Экспорт CSV
+    document.getElementById('exportStatsBtn')?.addEventListener('click', () => {
+        let csv = "\uFEFFДата,Шаблон,Блок\n";
+        history.forEach(h => {
+            csv += `"${h.date}","${escapeHtml(h.template)}","${h.block}"\n`;
         });
-    }
+        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `history_${new Date().toISOString().slice(0,10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast('📥 Экспорт завершён');
+    });
     
-    // Закрытие по клику на фон
-    if (adminDashboardModal) {
-        adminDashboardModal.addEventListener('click', (e) => {
-            if (e.target === adminDashboardModal) {
-                adminDashboardModal.style.display = 'none';
-            }
-        });
-    }
+    // Очистка истории
+    document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
+        if (confirm('Очистить всю историю копирований?')) {
+            localStorage.setItem('copyHistory', JSON.stringify([]));
+            counters = {};
+            saveCounters();
+            showToast('🗑️ История очищена');
+            setTimeout(() => showAdminDashboard(), 500);
+        }
+    });
     
-    // Кнопка открытия
-    if (adminDashboardBtn) {
-        adminDashboardBtn.addEventListener('click', showAdminDashboard);
+    // Получаем модальное окно и показываем его
+    const adminModal = document.getElementById('adminDashboardModal');
+    if (adminModal) {
+        adminModal.style.display = 'flex';
     }
+}
+
+// ПОЛУЧАЕМ КНОПКИ (важно: после того как DOM загружен)
+const adminDashboardBtn = document.getElementById('adminDashboardBtn');
+const closeDashboardBtn = document.getElementById('closeAdminDashboardBtn');
+const adminDashboardModal = document.getElementById('adminDashboardModal');
+
+// Крестик закрытия
+if (closeDashboardBtn && adminDashboardModal) {
+    closeDashboardBtn.addEventListener('click', () => {
+        adminDashboardModal.style.display = 'none';
+    });
+}
+
+// Закрытие по клику на фон
+if (adminDashboardModal) {
+    adminDashboardModal.addEventListener('click', (e) => {
+        if (e.target === adminDashboardModal) {
+            adminDashboardModal.style.display = 'none';
+        }
+    });
+}
+
+// Кнопка открытия
+if (adminDashboardBtn) {
+    adminDashboardBtn.addEventListener('click', showAdminDashboard);
+}
     renderAll();
 </script>
 <!-- Модальное окно для дашборда руководителя -->
