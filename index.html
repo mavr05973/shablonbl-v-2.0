@@ -1650,9 +1650,8 @@ window.openModal = function(title, variants, block, originalTitle) {
     originalOpenModalForAI(title, variants, block, originalTitle);
 };
 
-// ========== ВСТАВКА ПЕРЕМЕННЫХ {ИМЯ} И {АДРЕС} (ИСПРАВЛЕННАЯ) ==========
+// ========== ВСТАВКА ПЕРЕМЕННЫХ (ПОДДЕРЖКА {ИМЯ}, {АДРЕС} И ПРОСТО ИМЯ, АДРЕС) ==========
 function showVariableInputs(callback) {
-    // Создаём модальное окно поверх всего
     const variableModal = document.createElement('div');
     variableModal.className = 'modal-overlay';
     variableModal.style.cssText = `
@@ -1717,15 +1716,44 @@ function showVariableInputs(callback) {
     variableModal.onclick = (e) => { if (e.target === variableModal) closeModal(); };
 }
 
-// Переопределяем функцию copyToClipboard
+// Переопределяем функцию copyToClipboard с поддержкой разных форматов переменных
 const originalCopyToClipboardForVars = copyToClipboard;
 window.copyToClipboard = async function(text) {
-    // Проверяем наличие переменных в тексте
-    if (text && (text.includes('{ИМЯ}') || text.includes('{АДРЕС}'))) {
+    if (!text) return;
+    
+    // Проверяем наличие переменных в разных форматах:
+    // 1. {ИМЯ} и {АДРЕС} с фигурными скобками
+    // 2. ИМЯ и АДРЕС без скобок (заглавными)
+    // 3. имя и адрес (строчными)
+    const hasNameVariable = text.includes('{ИМЯ}') || text.includes('ИМЯ') || text.includes('имя');
+    const hasAddressVariable = text.includes('{АДРЕС}') || text.includes('АДРЕС') || text.includes('адрес');
+    
+    if (hasNameVariable || hasAddressVariable) {
         showVariableInputs((name, address) => {
             let finalText = text;
-            if (name) finalText = finalText.replace(/\{ИМЯ\}/g, name);
-            if (address) finalText = finalText.replace(/\{АДРЕС\}/g, address);
+            
+            // Заменяем все возможные форматы переменной ИМЯ
+            if (name) {
+                finalText = finalText.replace(/\{ИМЯ\}/g, name);
+                finalText = finalText.replace(/ИМЯ/g, name);
+                finalText = finalText.replace(/имя/g, name);
+            } else {
+                finalText = finalText.replace(/\{ИМЯ\}/g, '{ИМЯ}');
+                finalText = finalText.replace(/ИМЯ/g, '{ИМЯ}');
+                finalText = finalText.replace(/имя/g, '{ИМЯ}');
+            }
+            
+            // Заменяем все возможные форматы переменной АДРЕС
+            if (address) {
+                finalText = finalText.replace(/\{АДРЕС\}/g, address);
+                finalText = finalText.replace(/АДРЕС/g, address);
+                finalText = finalText.replace(/адрес/g, address);
+            } else {
+                finalText = finalText.replace(/\{АДРЕС\}/g, '{АДРЕС}');
+                finalText = finalText.replace(/АДРЕС/g, '{АДРЕС}');
+                finalText = finalText.replace(/адрес/g, '{АДРЕС}');
+            }
+            
             originalCopyToClipboardForVars(finalText);
         });
     } else {
@@ -1733,9 +1761,7 @@ window.copyToClipboard = async function(text) {
     }
 };
 
-// Подменяем глобальные функции
 copyToClipboard = window.copyToClipboard;
-openModal = window.openModal;
 renderAll();
 </script>
 <!-- Модальное окно для дашборда руководителя -->
