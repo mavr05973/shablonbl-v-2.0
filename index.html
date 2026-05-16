@@ -310,13 +310,45 @@
             z-index: 99;
         }
         footer { text-align: center; margin-top: 40px; color: var(--text-secondary); font-size: 0.85rem; }
-    </style>
+                 /* ========== ПЕРСОНАЛЬНЫЕ ТЕМЫ ========== */
+        body.theme-blue {
+            --accent: #2c6e9e;
+            --accent-hover: #1e5a86;
+            --stat-bg: #e8f0f8;
+        }
+        body.theme-orange {
+            --accent: #e67e22;
+            --accent-hover: #c0392b;
+            --stat-bg: #fef5e8;
+        }
+        body.theme-purple {
+            --accent: #8e44ad;
+            --accent-hover: #6c3483;
+            --stat-bg: #f4eef8;
+        }
+        body.theme-gray {
+            --accent: #5a6e7a;
+            --accent-hover: #4a5a66;
+            --stat-bg: #eef2f5;
+        }
+        body.dark.theme-blue { --accent: #3a8cbb; --accent-hover: #2a7aa5; }
+        body.dark.theme-orange { --accent: #f39c12; --accent-hover: #e67e22; }
+        body.dark.theme-purple { --accent: #a569bd; --accent-hover: #9b59b6; }
+        body.dark.theme-gray { --accent: #7f8c8d; --accent-hover: #6c7a7a; }
+   </style>
 </head>
 <body>
 <div class="container">
     <div class="top-bar">
         <div class="search-box"><span>🔍</span><input type="text" id="searchInput" placeholder="Поиск по названию или тексту..."></div>
         <button id="feedbackBtn" class="feedback-btn">📝 Оставить отзыв</button>
+        <select id="colorThemeSelect" class="theme-toggle" style="background: var(--accent); color: white; border: none;">
+            <option value="green">🌿 Зелёная</option>
+            <option value="blue">💙 Синяя</option>
+            <option value="orange">🧡 Оранжевая</option>
+            <option value="purple">💜 Фиолетовая</option>
+            <option value="gray">🤍 Серая</option>
+        </select>
         <button id="backupBtn" class="backup-btn">💾 Бэкап</button>
         <button id="restoreBtn" class="restore-btn">🔄 Восстановить</button>
         <button class="theme-toggle" id="themeToggle">🌙 Тёмная тема</button>
@@ -590,7 +622,27 @@
     let searchQuery = '';
     let customTemplates = JSON.parse(localStorage.getItem('customTemplates') || '[]');
     let counters = JSON.parse(localStorage.getItem('templateCounters') || '{}');
+        let colorTheme = localStorage.getItem('colorTheme') || 'green';
     
+    function applyColorTheme() {
+        const body = document.body;
+        body.classList.remove('theme-blue', 'theme-orange', 'theme-purple', 'theme-gray');
+        if (colorTheme !== 'green') {
+            body.classList.add(`theme-${colorTheme}`);
+        }
+        const select = document.getElementById('colorThemeSelect');
+        if (select) select.value = colorTheme;
+    }
+    applyColorTheme();
+    
+    const colorThemeSelect = document.getElementById('colorThemeSelect');
+    if (colorThemeSelect) {
+        colorThemeSelect.addEventListener('change', (e) => {
+            colorTheme = e.target.value;
+            localStorage.setItem('colorTheme', colorTheme);
+            applyColorTheme();
+        });
+    }
     const agentGrid = document.getElementById('agentGrid');
     const sellerGrid = document.getElementById('sellerGrid');
     const leadGrid = document.getElementById('leadGrid');
