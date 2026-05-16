@@ -1542,19 +1542,20 @@ function showAdminDashboard() {
 
 // ПОЛУЧАЕМ КНОПКИ (важно: после того как DOM загружен)
 const closeDashboardBtn = document.getElementById('closeAdminDashboardBtn');
+const adminModal = document.getElementById('adminDashboardModal');
 
 // Крестик закрытия
-if (closeDashboardBtn && adminDashboardModal) {
+if (closeDashboardBtn && adminModal) {
     closeDashboardBtn.addEventListener('click', () => {
-        adminDashboardModal.style.display = 'none';
+        adminModal.style.display = 'none';
     });
 }
 
 // Закрытие по клику на фон
-if (adminDashboardModal) {
-    adminDashboardModal.addEventListener('click', (e) => {
-        if (e.target === adminDashboardModal) {
-            adminDashboardModal.style.display = 'none';
+if (adminModal) {
+    adminModal.addEventListener('click', (e) => {
+        if (e.target === adminModal) {
+            adminModal.style.display = 'none';
         }
     });
 }
