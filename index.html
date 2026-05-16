@@ -349,6 +349,7 @@
             <option value="purple">💜 Фиолетовая</option>
             <option value="gray">🤍 Серая</option>
         </select>
+        <button id="adminDashboardBtn" class="backup-btn" style="background: #6f42c1; border-color: #6f42c1;">👑 Руководитель</button>
         <button id="backupBtn" class="backup-btn">💾 Бэкап</button>
         <button id="restoreBtn" class="restore-btn">🔄 Восстановить</button>
         <button class="theme-toggle" id="themeToggle">🌙 Тёмная тема</button>
@@ -1347,8 +1348,117 @@
             micButton.title = 'Голосовой поиск (нажмите и говорите)';
         };
     })();
+        // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
+    const adminDashboardModal = document.getElementById('adminDashboardModal');
+    const closeAdminModal = document.getElementById('closeAdminModal');
+    const adminDashboardBtn = document.getElementById('adminDashboardBtn');
     
+    // Если кнопки нет в HTML, добавь её в .top-bar (у тебя уже есть?)
+    // Проверь, есть ли в .top-bar кнопка с id="adminDashboardBtn"
+    
+    function showAdminDashboard() {
+        const password = prompt('Введите пароль для доступа к панели руководителя:');
+        if (password !== 'admin123') {
+            showToast('❌ Неверный пароль');
+            return;
+        }
+        
+        const totalCopies = Object.values(counters).reduce((a, b) => a + b, 0);
+        const topTemplates = [];
+        for (const [key, value] of Object.entries(counters)) {
+            let title = key;
+            if (key.startsWith('custom_')) title = `✏️ ${key.replace('custom_', '')}`;
+            else if (key.includes('_var')) continue;
+            else title = key.split('_').slice(1).join('_');
+            topTemplates.push({ title, count: value });
+        }
+        topTemplates.sort((a, b) => b.count - a.count);
+        const top10 = topTemplates.slice(0, 10);
+        
+        const container = document.getElementById('adminDashboardContainer');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                <div style="background: var(--stat-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border);">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">📊 Всего копирований</div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${totalCopies}</div>
+                </div>
+                <div style="background: var(--stat-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border);">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">📁 Всего шаблонов</div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${templatesData.agent.length + templatesData.seller.length + templatesData.lead.length + templatesData.incoming.length + customTemplates.length}</div>
+                </div>
+                <div style="background: var(--stat-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border);">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">⭐ Избранных шаблонов</div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${favorites.length}</div>
+                </div>
+                <div style="background: var(--stat-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border);">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">✏️ Своих шаблонов</div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${customTemplates.length}</div>
+                </div>
+            </div>
+            <div class="stats-category" style="margin-top: 20px;">
+                <div class="stats-category-title">🏆 Топ-10 самых копируемых шаблонов</div>
+                <ul style="list-style: none; padding: 0;">
+                    ${top10.map(t => `<li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);"><span>${escapeHtml(t.title)}</span><span class="stat-count">${t.count}</span></li>`).join('')}
+                    ${top10.length === 0 ? '<li>Нет данных</li>' : ''}
+                </ul>
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <button id="exportStatsBtn" class="submit-feedback">📥 Экспорт статистики (CSV)</button>
+            </div>
+        `;
+        
+        const exportBtn = document.getElementById('exportStatsBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                let csv = "Шаблон,Количество копирований\n";
+                for (const [key, value] of Object.entries(counters)) {
+                    let title = key;
+                    if (key.startsWith('custom_')) title = `Свой: ${key.replace('custom_', '')}`;
+                    else if (key.includes('_var')) continue;
+                    else title = key.split('_').slice(1).join('_');
+                    csv += `"${title}",${value}\n`;
+                }
+                const blob = new Blob([csv], {type: 'text/csv'});
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `statistics_${new Date().toISOString().slice(0,10)}.csv`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+                showToast('📥 Экспорт завершён');
+            });
+        }
+        
+        adminDashboardModal.style.display = 'flex';
+    }
+    
+    if (adminDashboardBtn) {
+        adminDashboardBtn.addEventListener('click', showAdminDashboard);
+    }
+    if (closeAdminModal) {
+        closeAdminModal.addEventListener('click', () => {
+            adminDashboardModal.style.display = 'none';
+        });
+    }
+    if (adminDashboardModal) {
+        adminDashboardModal.addEventListener('click', (e) => {
+            if (e.target === adminDashboardModal) adminDashboardModal.style.display = 'none';
+        });
+    }
     renderAll();
 </script>
+    <!-- Модальное окно для дашборда руководителя -->
+<div id="adminDashboardModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 900px;">
+        <div class="modal-header">
+            <h3>👑 Панель руководителя</h3>
+            <button class="close-modal" id="closeAdminModal">✕</button>
+        </div>
+        <div class="modal-body">
+            <div id="adminDashboardContainer"></div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
