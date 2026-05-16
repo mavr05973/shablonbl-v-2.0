@@ -1348,14 +1348,8 @@
             micButton.title = 'Голосовой поиск (нажмите и говорите)';
         };
     })();
-        // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
-    const adminDashboardModal = document.getElementById('adminDashboardModal');
-    const closeAdminModal = document.getElementById('closeAdminModal');
-    const adminDashboardBtn = document.getElementById('adminDashboardBtn');
-    
-    // Если кнопки нет в HTML, добавь её в .top-bar (у тебя уже есть?)
-    // Проверь, есть ли в .top-bar кнопка с id="adminDashboardBtn"
-    
+  // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
+    // Используем уже объявленные переменные (не создаём новые!)
     function showAdminDashboard() {
         const password = prompt('Введите пароль для доступа к панели руководителя:');
         if (password !== 'admin123') {
@@ -1376,7 +1370,10 @@
         const top10 = topTemplates.slice(0, 10);
         
         const container = document.getElementById('adminDashboardContainer');
-        if (!container) return;
+        if (!container) {
+            console.error('adminDashboardContainer не найден');
+            return;
+        }
         
         container.innerHTML = `
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
@@ -1446,6 +1443,7 @@
             if (e.target === adminDashboardModal) adminDashboardModal.style.display = 'none';
         });
     }
+    
     renderAll();
 </script>
     <!-- Модальное окно для дашборда руководителя -->
