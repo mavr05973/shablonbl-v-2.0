@@ -1542,27 +1542,35 @@ function showAdminDashboard() {
 
 // ========== УПРАВЛЕНИЕ МОДАЛЬНЫМ ОКНОМ РУКОВОДИТЕЛЯ ==========
 
-// Кнопка закрытия (крестик)
-const closeDashboardBtn = document.getElementById('closeAdminDashboardBtn');
-if (closeDashboardBtn) {
-    closeDashboardBtn.addEventListener('click', function() {
-        const modal = document.getElementById('adminDashboardModal');
-        if (modal) modal.style.display = 'none';
-    });
-}
+// Получаем элементы
+const adminModalElement = document.getElementById('adminDashboardModal');
+const closeBtn = document.getElementById('closeAdminDashboardBtn');
 
-// Клик на фон (оверлей)
-const modalOverlay = document.getElementById('adminDashboardModal');
-if (modalOverlay) {
-    modalOverlay.addEventListener('click', function(e) {
-        if (e.target === modalOverlay) {
-            modalOverlay.style.display = 'none';
+// Удаляем все старые обработчики (если были)
+if (closeBtn) {
+    // Создаём новый обработчик
+    closeBtn.onclick = null;
+    closeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (adminModalElement) {
+            adminModalElement.style.display = 'none';
         }
     });
 }
 
-// Кнопка открытия
+// Закрытие по клику на фон
+if (adminModalElement) {
+    adminModalElement.onclick = null;
+    adminModalElement.addEventListener('click', function(e) {
+        if (e.target === adminModalElement) {
+            adminModalElement.style.display = 'none';
+        }
+    });
+}
+
+// Кнопка открытия (один раз)
 if (adminDashboardBtn) {
+    adminDashboardBtn.onclick = null;
     adminDashboardBtn.addEventListener('click', showAdminDashboard);
 }
 
