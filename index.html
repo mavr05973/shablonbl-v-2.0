@@ -909,7 +909,7 @@
         if (cat2) statsContainer.appendChild(cat2);
         if (cat3) statsContainer.appendChild(cat3);
         
-        if (customTemplates.length > 0) {
+                if (customTemplates.length > 0) {
             const customStats = document.createElement('div');
             customStats.className = 'stats-category';
             let totalCustom = 0;
@@ -1001,6 +1001,147 @@
         return categoryDiv;
     }
     
+    // ========== НОВАЯ ФУНКЦИЯ ПОИСКА ПО ВСЕМ ШАБЛОНАМ ==========
+    function searchAllTemplates(query) {
+        if (!query || query.trim() === '') return [];
+        
+        const q = query.toLowerCase().trim();
+        const allResults = [];
+        
+        const blocks = [
+            { name: '📨 Входящие запросы', data: templatesData.incoming, blockKey: 'incoming' },
+            { name: '🤝 Агенту', data: templatesData.agent, blockKey: 'agent' },
+            { name: '🏢 Селлеру', data: templatesData.seller, blockKey: 'seller' },
+            { name: '📌 Лиды от АН', data: templatesData.lead, blockKey: 'lead' }
+        ];
+        
+        for (const block of blocks) {
+            if (!block.data) continue;
+            
+            for (const item of block.data) {
+                const titleMatch = item.title.toLowerCase().includes(q);
+                const textMatch = item.variants.some(v => v.toLowerCase().includes(q));
+                
+                if (titleMatch || textMatch) {
+                    allResults.push({
+                        blockName: block.name,
+                        blockKey: block.blockKey,
+                        title: item.title,
+                        variants: item.variants
+                    });
+                }
+            }
+        }
+        
+        return allResults;
+    }
+    
+    // ========== ПАНЕЛЬ РЕЗУЛЬТАТОВ ПОИСКА ==========
+    (function() {
+        const searchContainer = document.querySelector('.container');
+        const searchBox = document.querySelector('.search-box');
+        
+        if (!searchContainer || !searchBox) return;
+        
+        // Создаём блок результатов
+        const resultsPanel = document.createElement('div');
+        resultsPanel.id = 'searchResultsPanel';
+        resultsPanel.style.cssText = `
+            display: none;
+            margin: 16px 0 24px 0;
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            max-height: 400px;
+            overflow-y: auto;
+        `;
+        
+        resultsPanel.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
+                <span style="font-weight: 600; color: var(--accent);">🔍 Результаты поиска</span>
+                <button id="closeSearchResults" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary);">✕</button>
+            </div>
+            <div id="searchResultsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        `;
+        
+        searchBox.parentNode.insertBefore(resultsPanel, searchBox.nextSibling);
+        
+        const resultsList = document.getElementById('searchResultsList');
+        const closeResultsBtn = document.getElementById('closeSearchResults');
+        
+        if (closeResultsBtn) {
+            closeResultsBtn.addEventListener('click', () => {
+                resultsPanel.style.display = 'none';
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) searchInput.value = '';
+                renderAll(); // Сбрасываем фильтрацию в блоках
+            });
+        }
+        
+        function displayResults(results) {
+            if (!resultsList) return;
+            
+            if (results.length === 0) {
+                resultsList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary);">😕 Ничего не найдено</div>';
+                resultsPanel.style.display = 'block';
+                return;
+            }
+            
+            resultsList.innerHTML = '';
+            results.forEach(result => {
+                const resultItem = document.createElement('div');
+                resultItem.style.cssText = `
+                    padding: 10px 14px;
+                    background: var(--btn-bg);
+                    border-radius: 16px;
+                    cursor: pointer;
+                    transition: 0.1s;
+                    border: 1px solid var(--btn-border);
+                `;
+                resultItem.innerHTML = `
+                    <div style="font-weight: 600; color: var(--accent); font-size: 0.75rem; margin-bottom: 4px;">${result.blockName}</div>
+                    <div style="font-weight: 500;">${result.title}</div>
+                `;
+                resultItem.addEventListener('click', () => {
+                    openModal(result.title, result.variants, result.blockKey, result.title);
+                });
+                resultItem.addEventListener('mouseenter', () => {
+                    resultItem.style.backgroundColor = 'var(--btn-hover)';
+                    resultItem.style.transform = 'translateX(4px)';
+                });
+                resultItem.addEventListener('mouseleave', () => {
+                    resultItem.style.backgroundColor = 'var(--btn-bg)';
+                    resultItem.style.transform = 'translateX(0)';
+                });
+                resultsList.appendChild(resultItem);
+            });
+            
+            resultsPanel.style.display = 'block';
+        }
+        
+        // Перехватываем поиск
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            // Сохраняем оригинальный обработчик
+            const originalHandler = searchInput.oninput;
+            
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value;
+                const results = searchAllTemplates(query);
+                displayResults(results);
+                
+                // Также запускаем оригинальный поиск по блокам для обратной совместимости
+                if (originalHandler) originalHandler(e);
+                else if (typeof renderAll === 'function') {
+                    window.searchQuery = query;
+                    renderAll();
+                }
+            });
+        }
+    })();
+    
     function renderAll() {
         renderBlock(incomingGrid, templatesData.incoming, 'incoming');
         renderBlock(agentGrid, templatesData.agent, 'agent');
@@ -1024,7 +1165,7 @@
     addTemplateBtn.addEventListener('click', addCustomTemplate);
     resetStatsBtn.addEventListener('click', resetAllStats);
     
-       const headers = document.querySelectorAll('.accordion-block .accordion-header');
+    const headers = document.querySelectorAll('.accordion-block .accordion-header');
     headers.forEach(header => {
         const content = header.nextElementSibling;
         content.classList.remove('open');
@@ -1063,13 +1204,11 @@
     
     // ========== ГОЛОСОВОЙ ПОИСК ==========
     (function() {
-        // Находим поле поиска
         const searchInput = document.getElementById('searchInput');
         const searchBox = document.querySelector('.search-box');
         
         if (!searchInput || !searchBox) return;
         
-        // Создаём кнопку микрофона
         const micButton = document.createElement('button');
         micButton.textContent = '🎤';
         micButton.style.background = 'none';
@@ -1087,10 +1226,8 @@
         micButton.style.backgroundColor = 'transparent';
         micButton.style.color = 'var(--text-primary)';
         
-        // Вставляем кнопку в строку поиска
         searchBox.appendChild(micButton);
         
-        // Проверяем поддержку Web Speech API
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         
         if (!SpeechRecognition) {
@@ -1122,9 +1259,7 @@
                 micButton.title = 'Слушаю... Нажмите ещё раз, чтобы отменить';
                 
                 setTimeout(() => {
-                    if (isListening) {
-                        recognition.stop();
-                    }
+                    if (isListening) recognition.stop();
                 }, 10000);
             } catch (e) {
                 console.error('Ошибка запуска распознавания:', e);
