@@ -677,10 +677,22 @@
         return variantIndex !== null ? `${block}_${title}_var${variantIndex}` : `${block}_${title}`;
     }
     
-    function incrementCounter(block, title, variantIndex) {
+      function incrementCounter(block, title, variantIndex) {
         const key = getCounterKey(block, title, variantIndex);
         counters[key] = (counters[key] || 0) + 1;
         saveCounters();
+        
+        // Сохраняем в историю для дашборда
+        const history = JSON.parse(localStorage.getItem('copyHistory') || '[]');
+        history.push({
+            date: new Date().toISOString(),
+            template: title,
+            block: block
+        });
+        // Оставляем последние 2000 записей
+        if (history.length > 2000) history.shift();
+        localStorage.setItem('copyHistory', JSON.stringify(history));
+        
         renderAll();
         renderStats();
     }
@@ -1348,13 +1360,9 @@
             micButton.title = 'Голосовой поиск (нажмите и говорите)';
         };
     })();
-    // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
+   // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
     
-    // Сохраняем историю копирований (если её нет)
-    if (!localStorage.getItem('copyHistory')) {
-        localStorage.setItem('copyHistory', JSON.stringify([]));
-    }
-    
+    // Функция для сохранения истории копирований (вызывается при каждом копировании)
     function logCopyEvent(templateName, block) {
         const history = JSON.parse(localStorage.getItem('copyHistory') || '[]');
         history.push({
@@ -1362,50 +1370,16 @@
             template: templateName,
             block: block
         });
-        // Оставляем только последние 1000 записей
-        if (history.length > 1000) history.shift();
+        if (history.length > 2000) history.shift();
         localStorage.setItem('copyHistory', JSON.stringify(history));
     }
     
-    // Перехватываем incrementCounter, чтобы логировать
-    const originalIncrement = incrementCounter;
+    // Перехватываем оригинальную функцию incrementCounter, чтобы логировать копирования
+    const originalIncrementForLog = incrementCounter;
     incrementCounter = function(block, title, variantIndex) {
-        originalIncrement(block, title, variantIndex);
+        originalIncrementForLog(block, title, variantIndex);
         logCopyEvent(title, block);
     };
-    
-    function getStatsByDay(history) {
-        const days = {};
-        history.forEach(h => {
-            const day = h.date.slice(0, 10);
-            days[day] = (days[day] || 0) + 1;
-        });
-        return Object.entries(days).sort().reverse().slice(0, 14);
-    }
-    
-    function getStatsByWeekday(history) {
-        const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-        const stats = [0, 0, 0, 0, 0, 0, 0];
-        history.forEach(h => {
-            const date = new Date(h.date);
-            const day = date.getDay();
-            const idx = day === 0 ? 6 : day - 1;
-            stats[idx]++;
-        });
-        return weekdays.map((name, i) => ({ name, count: stats[i] }));
-    }
-    
-    function getStatsByBlock(history, totalTemplates) {
-        const blocks = { agent: 0, seller: 0, lead: 0, incoming: 0, custom: 0 };
-        history.forEach(h => {
-            if (h.block === 'agent') blocks.agent++;
-            else if (h.block === 'seller') blocks.seller++;
-            else if (h.block === 'lead') blocks.lead++;
-            else if (h.block === 'incoming') blocks.incoming++;
-            else if (h.block === 'custom') blocks.custom++;
-        });
-        return blocks;
-    }
     
     function showAdminDashboard() {
         const password = prompt('Введите пароль для доступа к панели руководителя:');
@@ -1417,48 +1391,75 @@
         // Получаем историю
         const history = JSON.parse(localStorage.getItem('copyHistory') || '[]');
         const totalCopies = history.length;
-        const daysStats = getStatsByDay(history);
-        const weekdayStats = getStatsByWeekday(history);
-        const blockStats = getStatsByBlock(history);
         
-        // Собираем топ шаблонов
-        const allTemplates = [];
-        templatesData.incoming.forEach(item => { allTemplates.push({ name: `📨 ${item.title}`, count: getTotalCount('incoming', item.title) }); });
-        templatesData.agent.forEach(item => { allTemplates.push({ name: `🤝 ${item.title}`, count: getTotalCount('agent', item.title) }); });
-        templatesData.seller.forEach(item => { allTemplates.push({ name: `🏢 ${item.title}`, count: getTotalCount('seller', item.title) }); });
-        templatesData.lead.forEach(item => { allTemplates.push({ name: `📌 ${item.title}`, count: getTotalCount('lead', item.title) }); });
-        customTemplates.forEach(tpl => { allTemplates.push({ name: `✏️ ${tpl.title}`, count: counters[`custom_${tpl.title}`] || 0 }); });
-        allTemplates.sort((a, b) => b.count - a.count);
-        const top10 = allTemplates.slice(0, 10);
+        // Статистика по дням
+        const daysMap = new Map();
+        history.forEach(h => {
+            const day = h.date.slice(0, 10);
+            daysMap.set(day, (daysMap.get(day) || 0) + 1);
+        });
+        const daysStats = Array.from(daysMap.entries()).sort().reverse().slice(0, 14);
+        
+        // Статистика по дням недели
+        const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+        const weekdayStats = [0, 0, 0, 0, 0, 0, 0];
+        history.forEach(h => {
+            const date = new Date(h.date);
+            let day = date.getDay();
+            day = day === 0 ? 6 : day - 1;
+            weekdayStats[day]++;
+        });
+        const maxWeekday = Math.max(...weekdayStats, 1);
+        
+        // Статистика по блокам
+        const blockStats = { agent: 0, seller: 0, lead: 0, incoming: 0, custom: 0 };
+        history.forEach(h => {
+            if (blockStats.hasOwnProperty(h.block)) blockStats[h.block]++;
+            else blockStats[h.block] = 1;
+        });
+        
+        // Топ шаблонов из истории
+        const templateMap = new Map();
+        history.forEach(h => {
+            const key = `${h.block}|${h.template}`;
+            templateMap.set(key, (templateMap.get(key) || 0) + 1);
+        });
+        const topTemplates = Array.from(templateMap.entries())
+            .map(([key, count]) => {
+                const [block, template] = key.split('|');
+                let blockIcon = '📌';
+                if (block === 'agent') blockIcon = '🤝';
+                else if (block === 'seller') blockIcon = '🏢';
+                else if (block === 'lead') blockIcon = '📌';
+                else if (block === 'incoming') blockIcon = '📨';
+                else if (block === 'custom') blockIcon = '✏️';
+                return { name: `${blockIcon} ${template}`, count };
+            })
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
         
         const container = document.getElementById('adminDashboardContainer');
         if (!container) return;
         
         container.innerHTML = `
-            <!-- Общая статистика -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
-                <div style="background: var(--stat-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border);">
-                    <div style="font-size: 0.85rem; color: var(--text-secondary);">📊 Всего копирований</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                <div class="stats-category" style="text-align: center;">
+                    <div style="font-size: 0.8rem;">📊 Всего копирований</div>
                     <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${totalCopies}</div>
                 </div>
-                <div style="background: var(--stat-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border);">
-                    <div style="font-size: 0.85rem; color: var(--text-secondary);">📁 Всего шаблонов</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${allTemplates.length}</div>
-                </div>
-                <div style="background: var(--stat-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border);">
-                    <div style="font-size: 0.85rem; color: var(--text-secondary);">⭐ Избранных шаблонов</div>
+                <div class="stats-category" style="text-align: center;">
+                    <div style="font-size: 0.8rem;">⭐ Избранных шаблонов</div>
                     <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${favorites.length}</div>
                 </div>
-                <div style="background: var(--stat-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border);">
-                    <div style="font-size: 0.85rem; color: var(--text-secondary);">✏️ Своих шаблонов</div>
+                <div class="stats-category" style="text-align: center;">
+                    <div style="font-size: 0.8rem;">✏️ Своих шаблонов</div>
                     <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${customTemplates.length}</div>
                 </div>
             </div>
             
-            <!-- Динамика и активность -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
                 <div class="stats-category">
-                    <div class="stats-category-title">📅 Копирования по дням (последние 14 дней)</div>
+                    <div class="stats-category-title">📅 Копирования по дням (14 дней)</div>
                     <div style="max-height: 200px; overflow-y: auto;">
                         ${daysStats.map(d => `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);"><span>${d[0]}</span><span class="stat-count">${d[1]}</span></div>`).join('')}
                         ${daysStats.length === 0 ? '<div style="padding: 12px; text-align: center;">Нет данных</div>' : ''}
@@ -1466,87 +1467,71 @@
                 </div>
                 <div class="stats-category">
                     <div class="stats-category-title">📆 Активность по дням недели</div>
-                    ${weekdayStats.map(w => `
-                        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
-                            <span>${w.name}</span>
-                            <span class="stat-count">${w.count}</span>
-                            <div style="flex: 1; margin-left: 8px; background: var(--btn-bg); border-radius: 10px; overflow: hidden;">
-                                <div style="width: ${Math.min(100, (w.count / Math.max(...weekdayStats.map(w2 => w2.count), 1)) * 100)}%; background: var(--accent); height: 8px;"></div>
+                    ${weekdays.map((name, i) => `
+                        <div style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
+                            <span style="width: 36px;">${name}</span>
+                            <span class="stat-count">${weekdayStats[i]}</span>
+                            <div style="flex: 1; background: var(--btn-bg); border-radius: 10px; overflow: hidden;">
+                                <div style="width: ${(weekdayStats[i] / maxWeekday) * 100}%; background: var(--accent); height: 8px;"></div>
                             </div>
                         </div>
                     `).join('')}
                 </div>
             </div>
             
-            <!-- Статистика по блокам -->
             <div class="stats-category" style="margin-bottom: 20px;">
                 <div class="stats-category-title">📂 Копирования по блокам</div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 12px;">
-                    <div style="text-align: center; padding: 8px; background: var(--btn-bg); border-radius: 16px;"><span>🤝 Агенту</span><br><span class="stat-count" style="font-size: 1.2rem;">${blockStats.agent}</span></div>
-                    <div style="text-align: center; padding: 8px; background: var(--btn-bg); border-radius: 16px;"><span>🏢 Селлеру</span><br><span class="stat-count" style="font-size: 1.2rem;">${blockStats.seller}</span></div>
-                    <div style="text-align: center; padding: 8px; background: var(--btn-bg); border-radius: 16px;"><span>📌 Лиды от АН</span><br><span class="stat-count" style="font-size: 1.2rem;">${blockStats.lead}</span></div>
-                    <div style="text-align: center; padding: 8px; background: var(--btn-bg); border-radius: 16px;"><span>📨 Входящие</span><br><span class="stat-count" style="font-size: 1.2rem;">${blockStats.incoming}</span></div>
-                    <div style="text-align: center; padding: 8px; background: var(--btn-bg); border-radius: 16px;"><span>✏️ Свои</span><br><span class="stat-count" style="font-size: 1.2rem;">${blockStats.custom}</span></div>
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+                    <div class="stat-item"><span>🤝 Агенту</span><span class="stat-count">${blockStats.agent || 0}</span></div>
+                    <div class="stat-item"><span>🏢 Селлеру</span><span class="stat-count">${blockStats.seller || 0}</span></div>
+                    <div class="stat-item"><span>📌 Лиды от АН</span><span class="stat-count">${blockStats.lead || 0}</span></div>
+                    <div class="stat-item"><span>📨 Входящие</span><span class="stat-count">${blockStats.incoming || 0}</span></div>
+                    <div class="stat-item"><span>✏️ Свои</span><span class="stat-count">${blockStats.custom || 0}</span></div>
                 </div>
             </div>
             
-            <!-- Топ-10 шаблонов -->
-            <div class="stats-category" style="margin-top: 20px;">
-                <div class="stats-category-title">🏆 Топ-10 самых копируемых шаблонов</div>
-                <ul style="list-style: none; padding: 0;">
-                    ${top10.map(t => `<li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);"><span style="font-size: 0.9rem;">${escapeHtml(t.name)}</span><span class="stat-count">${t.count}</span></li>`).join('')}
-                    ${top10.length === 0 ? '<li>Нет данных</li>' : ''}
-                </ul>
+            <div class="stats-category">
+                <div class="stats-category-title">🏆 Топ-10 копируемых шаблонов</div>
+                ${topTemplates.map(t => `<div class="stat-item" style="display: flex; justify-content: space-between;"><span>${escapeHtml(t.name)}</span><span class="stat-count">${t.count}</span></div>`).join('')}
+                ${topTemplates.length === 0 ? '<div style="padding: 12px; text-align: center;">Нет данных</div>' : ''}
             </div>
             
             <div style="margin-top: 20px; text-align: center;">
-                <button id="exportStatsBtn" class="submit-feedback">📥 Экспорт статистики (CSV)</button>
+                <button id="exportStatsBtn" class="submit-feedback">📥 Экспорт истории (CSV)</button>
                 <button id="clearHistoryBtn" class="reset-stats-btn" style="margin-left: 12px;">🗑️ Очистить историю</button>
             </div>
         `;
         
         // Экспорт CSV
-        const exportBtn = document.getElementById('exportStatsBtn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                let csv = "\uFEFFДата,Шаблон,Блок\n";
-                history.forEach(h => {
-                    csv += `"${h.date}","${h.template}","${h.block}"\n`;
-                });
-                const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.href = url;
-                link.setAttribute('download', `statistics_full_${new Date().toISOString().slice(0,10)}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                showToast('📥 Экспорт завершён');
+        document.getElementById('exportStatsBtn')?.addEventListener('click', () => {
+            let csv = "\uFEFFДата,Шаблон,Блок\n";
+            history.forEach(h => {
+                csv += `"${h.date}","${escapeHtml(h.template)}","${h.block}"\n`;
             });
-        }
+            const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `history_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showToast('📥 Экспорт завершён');
+        });
         
-        // Кнопка очистки истории
-        const clearBtn = document.getElementById('clearHistoryBtn');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
-                if (confirm('Вы уверены, что хотите очистить всю историю копирований? Это действие нельзя отменить.')) {
-                    localStorage.setItem('copyHistory', JSON.stringify([]));
-                    showToast('🗑️ История очищена');
-                    setTimeout(() => showAdminDashboard(), 500);
-                }
-            });
-        }
+        // Очистка истории
+        document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
+            if (confirm('Очистить всю историю копирований?')) {
+                localStorage.setItem('copyHistory', JSON.stringify([]));
+                counters = {};
+                saveCounters();
+                showToast('🗑️ История очищена');
+                setTimeout(() => showAdminDashboard(), 500);
+            }
+        });
         
         adminDashboardModal.style.display = 'flex';
     }
     
-    // Обработчики для модального окна (работа с крестиком)
-    if (adminDashboardBtn) {
-        adminDashboardBtn.addEventListener('click', showAdminDashboard);
-    }
-    
-    // Отдельный обработчик для крестика с уникальным ID
+    // Крестик закрытия
     const closeDashboardBtn = document.getElementById('closeAdminDashboardBtn');
     if (closeDashboardBtn) {
         closeDashboardBtn.addEventListener('click', () => {
@@ -1554,6 +1539,7 @@
         });
     }
     
+    // Закрытие по клику на фон
     if (adminDashboardModal) {
         adminDashboardModal.addEventListener('click', (e) => {
             if (e.target === adminDashboardModal) {
@@ -1561,19 +1547,24 @@
             }
         });
     }
+    
+    // Кнопка открытия
+    if (adminDashboardBtn) {
+        adminDashboardBtn.addEventListener('click', showAdminDashboard);
+    }
     renderAll();
 </script>
-       <!-- Модальное окно для дашборда руководителя -->
-<div id="adminDashboardModal" class="modal-overlay">
-    <div class="modal-card" style="max-width: 950px;">
-        <div class="modal-header">
-            <h3>👑 Панель руководителя</h3>
-            <button id="closeAdminDashboardBtn" style="background: none; border: none; font-size: 30px; cursor: pointer; color: var(--text-secondary);">✕</button>
-        </div>
-        <div class="modal-body">
-            <div id="adminDashboardContainer"></div>
+           <!-- Модальное окно для дашборда руководителя -->
+    <div id="adminDashboardModal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 950px;">
+            <div class="modal-header">
+                <h3>👑 Панель руководителя</h3>
+                <button id="closeAdminDashboardBtn" style="background: none; border: none; font-size: 30px; cursor: pointer; color: var(--text-secondary);">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="adminDashboardContainer"></div>
+            </div>
         </div>
     </div>
-</div>
 </body>
 </html>
