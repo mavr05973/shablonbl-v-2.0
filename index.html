@@ -1384,8 +1384,8 @@ function renderAll() {
             micButton.title = 'Голосовой поиск (нажмите и говорите)';
         };
     })();
-      // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
-   
+   // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
+
 function showAdminDashboard() {
     const password = prompt('Введите пароль для доступа к панели руководителя:');
     if (password !== 'admin123') {
@@ -1393,11 +1393,9 @@ function showAdminDashboard() {
         return;
     }
     
-    // Получаем историю
     const history = JSON.parse(localStorage.getItem('copyHistory') || '[]');
     const totalCopies = history.length;
     
-    // Статистика по дням
     const daysMap = new Map();
     history.forEach(h => {
         const day = h.date.slice(0, 10);
@@ -1405,7 +1403,6 @@ function showAdminDashboard() {
     });
     const daysStats = Array.from(daysMap.entries()).sort().reverse().slice(0, 14);
     
-    // Статистика по дням недели
     const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     const weekdayStats = [0, 0, 0, 0, 0, 0, 0];
     history.forEach(h => {
@@ -1416,14 +1413,12 @@ function showAdminDashboard() {
     });
     const maxWeekday = Math.max(...weekdayStats, 1);
     
-    // Статистика по блокам
     const blockStats = { agent: 0, seller: 0, lead: 0, incoming: 0, custom: 0 };
     history.forEach(h => {
         if (blockStats.hasOwnProperty(h.block)) blockStats[h.block]++;
         else blockStats[h.block] = 1;
     });
     
-    // Топ шаблонов из истории
     const templateMap = new Map();
     history.forEach(h => {
         const key = `${h.block}|${h.template}`;
@@ -1507,7 +1502,6 @@ function showAdminDashboard() {
         </div>
     `;
     
-    // Экспорт CSV
     document.getElementById('exportStatsBtn')?.addEventListener('click', () => {
         let csv = "\uFEFFДата,Шаблон,Блок\n";
         history.forEach(h => {
@@ -1522,7 +1516,6 @@ function showAdminDashboard() {
         showToast('📥 Экспорт завершён');
     });
     
- // Очистка истории
     document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
         if (confirm('Очистить всю историю копирований?')) {
             localStorage.setItem('copyHistory', JSON.stringify([]));
@@ -1530,49 +1523,40 @@ function showAdminDashboard() {
             saveCounters();
             showToast('🗑️ История очищена');
             setTimeout(() => showAdminDashboard(), 500);
-        }  // ← закрывает if
-    });  // ← закрывает addEventListener
+        }
+    });
     
-    // Модальное окно будет показано из обёртки
-}  // ← закрывает функцию showAdminDashboard
-
-// ========== УПРАВЛЕНИЕ МОДАЛЬНЫМ ОКНОМ РУКОВОДИТЕЛЯ ==========
-(function() {
-    // Получаем элементы
-    const modal = document.getElementById('adminDashboardModal');
-    const closeBtn = document.getElementById('closeAdminDashboardBtn');
-    const openBtn = document.getElementById('adminDashboardBtn');
-    
-    // Функция закрытия
-    function closeModal() {
-        if (modal) modal.style.display = 'none';
+    // ПОКАЗЫВАЕМ ОКНО
+    const modalWindow = document.getElementById('adminDashboardModal');
+    if (modalWindow) {
+        modalWindow.style.display = 'flex';
     }
-    
-    // Функция открытия (вызывается из showAdminDashboard)
-    window.showAdminDashboardOriginal = showAdminDashboard;
-    window.showAdminDashboard = function() {
-        window.showAdminDashboardOriginal();
-        if (modal) modal.style.display = 'flex';
+}
+
+// УПРАВЛЕНИЕ ЗАКРЫТИЕМ ОКНА
+const closeBtn = document.getElementById('closeAdminDashboardBtn');
+const modalBg = document.getElementById('adminDashboardModal');
+
+if (closeBtn) {
+    closeBtn.onclick = function() {
+        if (modalBg) modalBg.style.display = 'none';
     };
-    
-    // Вешаем события
-    if (closeBtn) {
-        closeBtn.onclick = closeModal;
-    }
-    
-    if (modal) {
-        modal.onclick = function(e) {
-            if (e.target === modal) closeModal();
-        };
-    }
-    
-    if (openBtn) {
-        openBtn.onclick = function() {
-            window.showAdminDashboard();
-        };
-    }
-})();
+}
 
+if (modalBg) {
+    modalBg.onclick = function(e) {
+        if (e.target === modalBg) {
+            modalBg.style.display = 'none';
+        }
+    };
+}
+
+// КНОПКА ОТКРЫТИЯ
+if (adminDashboardBtn) {
+    adminDashboardBtn.onclick = function() {
+        showAdminDashboard();
+    };
+}
 renderAll();
 </script>
 <!-- Модальное окно для дашборда руководителя -->
