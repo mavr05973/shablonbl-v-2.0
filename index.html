@@ -1533,30 +1533,37 @@ function showAdminDashboard() {
     }
 }
 
-// УПРАВЛЕНИЕ ЗАКРЫТИЕМ ОКНА
-const closeBtn = document.getElementById('closeAdminDashboardBtn');
-const modalBg = document.getElementById('adminDashboardModal');
+// ========== УПРАВЛЕНИЕ ДАШБОРДОМ (ПРОСТОЕ И НАДЁЖНОЕ) ==========
 
+// Крестик закрытия
+const closeBtn = document.getElementById('closeAdminDashboardBtn');
 if (closeBtn) {
-    closeBtn.onclick = function() {
-        if (modalBg) modalBg.style.display = 'none';
+    closeBtn.onclick = function(e) {
+        e.stopPropagation();
+        const modal = document.getElementById('adminDashboardModal');
+        if (modal) modal.style.display = 'none';
+        console.log('Крестик сработал'); // для проверки
     };
 }
 
+// Закрытие по клику на фон
+const modalBg = document.getElementById('adminDashboardModal');
 if (modalBg) {
     modalBg.onclick = function(e) {
         if (e.target === modalBg) {
             modalBg.style.display = 'none';
+            console.log('Клик по фону сработал');
         }
     };
 }
 
-// КНОПКА ОТКРЫТИЯ
+// Кнопка открытия
 if (adminDashboardBtn) {
     adminDashboardBtn.onclick = function() {
         showAdminDashboard();
     };
 }
+
 renderAll();
 </script>
 <!-- Модальное окно для дашборда руководителя -->
