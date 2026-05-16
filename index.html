@@ -1024,7 +1024,7 @@
     addTemplateBtn.addEventListener('click', addCustomTemplate);
     resetStatsBtn.addEventListener('click', resetAllStats);
     
-    const headers = document.querySelectorAll('.accordion-block .accordion-header');
+       const headers = document.querySelectorAll('.accordion-block .accordion-header');
     headers.forEach(header => {
         const content = header.nextElementSibling;
         content.classList.remove('open');
@@ -1060,6 +1060,106 @@
             }, 5000);
         }
     }
+    
+    // ========== ГОЛОСОВОЙ ПОИСК ==========
+    (function() {
+        // Находим поле поиска
+        const searchInput = document.getElementById('searchInput');
+        const searchBox = document.querySelector('.search-box');
+        
+        if (!searchInput || !searchBox) return;
+        
+        // Создаём кнопку микрофона
+        const micButton = document.createElement('button');
+        micButton.textContent = '🎤';
+        micButton.style.background = 'none';
+        micButton.style.border = 'none';
+        micButton.style.fontSize = '1.3rem';
+        micButton.style.cursor = 'pointer';
+        micButton.style.padding = '0 8px';
+        micButton.style.borderRadius = '50%';
+        micButton.style.width = '36px';
+        micButton.style.height = '36px';
+        micButton.style.display = 'inline-flex';
+        micButton.style.alignItems = 'center';
+        micButton.style.justifyContent = 'center';
+        micButton.style.transition = '0.1s';
+        micButton.style.backgroundColor = 'transparent';
+        micButton.style.color = 'var(--text-primary)';
+        
+        // Вставляем кнопку в строку поиска
+        searchBox.appendChild(micButton);
+        
+        // Проверяем поддержку Web Speech API
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            micButton.style.opacity = '0.5';
+            micButton.title = 'Голосовой поиск не поддерживается вашим браузером';
+            micButton.disabled = true;
+            return;
+        }
+        
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'ru-RU';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        
+        let isListening = false;
+        
+        micButton.addEventListener('click', () => {
+            if (isListening) {
+                recognition.stop();
+                return;
+            }
+            
+            try {
+                recognition.start();
+                isListening = true;
+                micButton.style.backgroundColor = 'var(--accent)';
+                micButton.style.color = 'white';
+                micButton.textContent = '⏺';
+                micButton.title = 'Слушаю... Нажмите ещё раз, чтобы отменить';
+                
+                setTimeout(() => {
+                    if (isListening) {
+                        recognition.stop();
+                    }
+                }, 10000);
+            } catch (e) {
+                console.error('Ошибка запуска распознавания:', e);
+                showToast('❌ Не удалось запустить микрофон. Проверьте разрешения.');
+            }
+        });
+        
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            if (transcript) {
+                searchInput.value = transcript;
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                showToast(`🔍 Поиск: "${transcript}"`);
+            }
+            recognition.stop();
+        };
+        
+        recognition.onerror = (event) => {
+            console.error('Ошибка распознавания:', event.error);
+            let errorMessage = '❌ Ошибка распознавания';
+            if (event.error === 'not-allowed') errorMessage = '❌ Доступ к микрофону запрещён. Разрешите в настройках браузера.';
+            else if (event.error === 'no-speech') errorMessage = '🤐 Речь не обнаружена. Попробуйте ещё раз.';
+            else if (event.error === 'audio-capture') errorMessage = '❌ Микрофон не найден. Проверьте подключение.';
+            showToast(errorMessage);
+            recognition.stop();
+        };
+        
+        recognition.onend = () => {
+            isListening = false;
+            micButton.style.backgroundColor = 'transparent';
+            micButton.style.color = 'var(--text-primary)';
+            micButton.textContent = '🎤';
+            micButton.title = 'Голосовой поиск (нажмите и говорите)';
+        };
+    })();
     
     renderAll();
 </script>
