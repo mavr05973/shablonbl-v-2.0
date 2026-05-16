@@ -1591,6 +1591,99 @@ setTimeout(function() {
         };
     }
 }, 100);
+    // ========== AI-ПОДСКАЗКИ (ЭМУЛЯЦИЯ) ==========
+function getAISuggestion() {
+    const suggestions = [
+        "💡 Попробуй использовать более личный подход: обратись к клиенту по имени",
+        "💡 Добавь конкретные преимущества: 'Безопасная сделка через Авито'",
+        "💡 Укажи точные сроки: 'Свяжусь с вами в течение 15 минут'",
+        "💡 Используй вопрос в конце сообщения — это повышает ответ",
+        "💡 Добавь эмодзи для привлечения внимания, но не переусердствуй",
+        "💡 Напомни о бесплатности услуги: 'Консультация без оплаты'",
+        "💡 Уточни удобное время для звонка — клиенты это ценят"
+    ];
+    const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+    showToast(randomSuggestion);
+}
+
+let modalOpenCount = 0;
+const originalOpenModal = openModal;
+window.openModal = function(title, variants, block, originalTitle) {
+    modalOpenCount++;
+    if (modalOpenCount % 3 === 0) {
+        setTimeout(() => getAISuggestion(), 500);
+    }
+    originalOpenModal(title, variants, block, originalTitle);
+};
+
+// ========== ВСТАВКА ПЕРЕМЕННЫХ {ИМЯ} И {АДРЕС} ==========
+function showVariableInputs(callback) {
+    const variableModal = document.createElement('div');
+    variableModal.className = 'modal-overlay';
+    variableModal.style.display = 'flex';
+    variableModal.innerHTML = `
+        <div class="modal-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>✏️ Вставка переменных</h3>
+                <button class="close-modal" style="background: none; border: none; font-size: 28px; cursor: pointer;">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px;">Замените плейсхолдеры в шаблоне:</p>
+                <label style="display: block; margin-bottom: 12px;">
+                    <span style="font-weight: 600;">👤 Имя:</span>
+                    <input type="text" id="variableName" placeholder="Введите имя" style="width: 100%; padding: 10px; margin-top: 5px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary);">
+                </label>
+                <label style="display: block; margin-bottom: 20px;">
+                    <span style="font-weight: 600;">📍 Адрес:</span>
+                    <input type="text" id="variableAddress" placeholder="Введите адрес" style="width: 100%; padding: 10px; margin-top: 5px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary);">
+                </label>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button id="cancelVariablesBtn" style="padding: 8px 20px; border-radius: 40px; border: 1px solid var(--border); background: var(--btn-bg); cursor: pointer;">Отмена</button>
+                    <button id="applyVariablesBtn" style="padding: 8px 20px; border-radius: 40px; background: var(--accent); color: white; border: none; cursor: pointer;">Применить</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(variableModal);
+    
+    const closeBtn = variableModal.querySelector('.close-modal');
+    const cancelBtn = document.getElementById('cancelVariablesBtn');
+    const applyBtn = document.getElementById('applyVariablesBtn');
+    const nameInput = document.getElementById('variableName');
+    const addressInput = document.getElementById('variableAddress');
+    
+    function closeModal() {
+        variableModal.remove();
+    }
+    
+    function applyAndClose() {
+        const name = nameInput.value.trim() || '{ИМЯ}';
+        const address = addressInput.value.trim() || '{АДРЕС}';
+        callback(name, address);
+        closeModal();
+    }
+    
+    closeBtn.onclick = closeModal;
+    cancelBtn.onclick = closeModal;
+    applyBtn.onclick = applyAndClose;
+    variableModal.onclick = (e) => { if (e.target === variableModal) closeModal(); };
+}
+
+const originalCopyToClipboard = copyToClipboard;
+window.copyToClipboard = async function(text) {
+    if (text.includes('{ИМЯ}') || text.includes('{АДРЕС}')) {
+        showVariableInputs((name, address) => {
+            let finalText = text.replace(/\{ИМЯ\}/g, name).replace(/\{АДРЕС\}/g, address);
+            originalCopyToClipboard(finalText);
+        });
+    } else {
+        originalCopyToClipboard(text);
+    }
+};
+
+copyToClipboard = window.copyToClipboard;
+openModal = window.openModal;
 renderAll();
 </script>
 <!-- Модальное окно для дашборда руководителя -->
