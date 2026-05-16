@@ -1540,29 +1540,30 @@ function showAdminDashboard() {
     }
 }
 
-// ПОЛУЧАЕМ ЭЛЕМЕНТЫ ДЛЯ УПРАВЛЕНИЯ МОДАЛЬНЫМ ОКНОМ
+// ========== УПРАВЛЕНИЕ МОДАЛЬНЫМ ОКНОМ РУКОВОДИТЕЛЯ ==========
+
+// Кнопка закрытия (крестик)
 const closeDashboardBtn = document.getElementById('closeAdminDashboardBtn');
-const dashboardModal = document.getElementById('adminDashboardModal');
-
-// Крестик закрытия
-if (closeDashboardBtn && dashboardModal) {
-    closeDashboardBtn.onclick = function() {
-        dashboardModal.style.display = 'none';
-    };
+if (closeDashboardBtn) {
+    closeDashboardBtn.addEventListener('click', function() {
+        const modal = document.getElementById('adminDashboardModal');
+        if (modal) modal.style.display = 'none';
+    });
 }
 
-// Закрытие по клику на фон
-if (dashboardModal) {
-    dashboardModal.onclick = function(e) {
-        if (e.target === dashboardModal) {
-            dashboardModal.style.display = 'none';
+// Клик на фон (оверлей)
+const modalOverlay = document.getElementById('adminDashboardModal');
+if (modalOverlay) {
+    modalOverlay.addEventListener('click', function(e) {
+        if (e.target === modalOverlay) {
+            modalOverlay.style.display = 'none';
         }
-    };
+    });
 }
 
-// Кнопка открытия панели руководителя
+// Кнопка открытия
 if (adminDashboardBtn) {
-    adminDashboardBtn.onclick = showAdminDashboard;
+    adminDashboardBtn.addEventListener('click', showAdminDashboard);
 }
 
 renderAll();
