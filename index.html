@@ -616,6 +616,7 @@
     
     console.log("✅ Данные загружены. Блок 'Входящие запросы' содержит 27 статусов, 54 варианта.");
         // ==========================================
+        // ==========================================
     // ВСЕ ФУНКЦИИ (рендеринг, избранное, статистика, бэкап)
     // ==========================================
     let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
@@ -623,7 +624,8 @@
     let searchQuery = '';
     let customTemplates = JSON.parse(localStorage.getItem('customTemplates') || '[]');
     let counters = JSON.parse(localStorage.getItem('templateCounters') || '{}');
-        let colorTheme = localStorage.getItem('colorTheme') || 'green';
+    let colorTheme = localStorage.getItem('colorTheme') || 'green';
+    let globalSearchActive = false;
     
     function applyColorTheme() {
         const body = document.body;
@@ -677,25 +679,24 @@
         return variantIndex !== null ? `${block}_${title}_var${variantIndex}` : `${block}_${title}`;
     }
     
-      function incrementCounter(block, title, variantIndex) {
-        const key = getCounterKey(block, title, variantIndex);
-        counters[key] = (counters[key] || 0) + 1;
-        saveCounters();
-        
-        // Сохраняем в историю для дашборда
-        const history = JSON.parse(localStorage.getItem('copyHistory') || '[]');
-        history.push({
-            date: new Date().toISOString(),
-            template: title,
-            block: block
-        });
-        // Оставляем последние 2000 записей
-        if (history.length > 2000) history.shift();
-        localStorage.setItem('copyHistory', JSON.stringify(history));
-        
-        renderAll();
-        renderStats();
-    }
+function incrementCounter(block, title, variantIndex) {
+    const key = getCounterKey(block, title, variantIndex);
+    counters[key] = (counters[key] || 0) + 1;
+    saveCounters();
+    
+    // Сохраняем в историю для дашборда
+    const history = JSON.parse(localStorage.getItem('copyHistory') || '[]');
+    history.push({
+        date: new Date().toISOString(),
+        template: title,
+        block: block
+    });
+    if (history.length > 2000) history.shift();
+    localStorage.setItem('copyHistory', JSON.stringify(history));
+    
+    renderAll();
+    renderStats();
+}
     
     function getTotalCount(block, title) {
         let total = 0;
@@ -1067,157 +1068,178 @@
     }
     
     // ========== НОВАЯ ФУНКЦИЯ ПОИСКА ПО ВСЕМ ШАБЛОНАМ ==========
-    function searchAllTemplates(query) {
-        if (!query || query.trim() === '') return [];
+function searchAllTemplates(query) {
+    if (!query || query.trim() === '') return [];
+    
+    const q = query.toLowerCase().trim();
+    const allResults = [];
+    
+    const blocks = [
+        { name: '📨 Входящие запросы', data: templatesData.incoming, blockKey: 'incoming' },
+        { name: '🤝 Агенту', data: templatesData.agent, blockKey: 'agent' },
+        { name: '🏢 Селлеру', data: templatesData.seller, blockKey: 'seller' },
+        { name: '📌 Лиды от АН', data: templatesData.lead, blockKey: 'lead' }
+    ];
+    
+    for (const block of blocks) {
+        if (!block.data) continue;
         
-        const q = query.toLowerCase().trim();
-        const allResults = [];
-        
-        const blocks = [
-            { name: '📨 Входящие запросы', data: templatesData.incoming, blockKey: 'incoming' },
-            { name: '🤝 Агенту', data: templatesData.agent, blockKey: 'agent' },
-            { name: '🏢 Селлеру', data: templatesData.seller, blockKey: 'seller' },
-            { name: '📌 Лиды от АН', data: templatesData.lead, blockKey: 'lead' }
-        ];
-        
-        for (const block of blocks) {
-            if (!block.data) continue;
+        for (const item of block.data) {
+            const titleMatch = item.title.toLowerCase().includes(q);
+            const textMatch = item.variants.some(v => v.toLowerCase().includes(q));
             
-            for (const item of block.data) {
-                const titleMatch = item.title.toLowerCase().includes(q);
-                const textMatch = item.variants.some(v => v.toLowerCase().includes(q));
-                
-                if (titleMatch || textMatch) {
-                    allResults.push({
-                        blockName: block.name,
-                        blockKey: block.blockKey,
-                        title: item.title,
-                        variants: item.variants
-                    });
-                }
+            if (titleMatch || textMatch) {
+                allResults.push({
+                    blockName: block.name,
+                    blockKey: block.blockKey,
+                    title: item.title,
+                    variants: item.variants
+                });
             }
         }
-        
-        return allResults;
     }
     
-    // ========== ПАНЕЛЬ РЕЗУЛЬТАТОВ ПОИСКА ==========
-    (function() {
-        const searchContainer = document.querySelector('.container');
-        const searchBox = document.querySelector('.search-box');
-        
-        if (!searchContainer || !searchBox) return;
-        
-        // Создаём блок результатов
-        const resultsPanel = document.createElement('div');
-        resultsPanel.id = 'searchResultsPanel';
-        resultsPanel.style.cssText = `
-            display: none;
-            margin: 16px 0 24px 0;
-            padding: 16px 20px;
-            background: var(--bg-card);
-            border-radius: 24px;
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
-            max-height: 400px;
-            overflow-y: auto;
-        `;
-        
-        resultsPanel.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
-                <span style="font-weight: 600; color: var(--accent);">🔍 Результаты поиска</span>
-                <button id="closeSearchResults" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary);">✕</button>
-            </div>
-            <div id="searchResultsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
-        `;
-        
-        searchBox.parentNode.insertBefore(resultsPanel, searchBox.nextSibling);
-        
-        const resultsList = document.getElementById('searchResultsList');
-        const closeResultsBtn = document.getElementById('closeSearchResults');
-        
-        if (closeResultsBtn) {
-            closeResultsBtn.addEventListener('click', () => {
-                resultsPanel.style.display = 'none';
-                const searchInput = document.getElementById('searchInput');
-                if (searchInput) searchInput.value = '';
-                renderAll(); // Сбрасываем фильтрацию в блоках
+    // ========== ДОБАВЛЯЕМ ПОИСК ПО КАСТОМНЫМ ШАБЛОНАМ ==========
+    customTemplates.forEach((tpl, idx) => {
+        if (tpl.title.toLowerCase().includes(q) || tpl.text.toLowerCase().includes(q)) {
+            allResults.push({
+                blockName: '✏️ Мои шаблоны',
+                blockKey: 'custom',
+                title: tpl.title,
+                variants: [tpl.text],
+                isCustom: true,
+                customIndex: idx
             });
         }
+    });
+    
+    return allResults;
+}
+    
+// ========== ПАНЕЛЬ РЕЗУЛЬТАТОВ ПОИСКА ==========
+(function() {
+    const searchContainer = document.querySelector('.container');
+    const searchBox = document.querySelector('.search-box');
+    
+    if (!searchContainer || !searchBox) return;
+    
+    // Создаём блок результатов
+    const resultsPanel = document.createElement('div');
+    resultsPanel.id = 'searchResultsPanel';
+    resultsPanel.style.cssText = `
+        display: none;
+        margin: 16px 0 24px 0;
+        padding: 16px 20px;
+        background: var(--bg-card);
+        border-radius: 24px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        max-height: 400px;
+        overflow-y: auto;
+    `;
+    
+    resultsPanel.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
+            <span style="font-weight: 600; color: var(--accent);">🔍 Результаты поиска</span>
+            <button id="closeSearchResults" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary);">✕</button>
+        </div>
+        <div id="searchResultsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+    `;
+    
+    searchBox.parentNode.insertBefore(resultsPanel, searchBox.nextSibling);
+    
+    const resultsList = document.getElementById('searchResultsList');
+    const closeResultsBtn = document.getElementById('closeSearchResults');
+    
+  function closeSearchPanel() {
+    resultsPanel.style.display = 'none';
+    const searchInputElem = document.getElementById('searchInput');
+    if (searchInputElem) searchInputElem.value = '';
+    globalSearchActive = false;
+    searchQuery = '';
+    renderAll();
+}
+    
+    if (closeResultsBtn) {
+        closeResultsBtn.addEventListener('click', closeSearchPanel);
+    }
+    
+    function displayResults(results) {
+        if (!resultsList) return;
         
-        function displayResults(results) {
-            if (!resultsList) return;
-            
-            if (results.length === 0) {
-                resultsList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary);">😕 Ничего не найдено</div>';
-                resultsPanel.style.display = 'block';
-                return;
-            }
-            
-            resultsList.innerHTML = '';
-            results.forEach(result => {
-                const resultItem = document.createElement('div');
-                resultItem.style.cssText = `
-                    padding: 10px 14px;
-                    background: var(--btn-bg);
-                    border-radius: 16px;
-                    cursor: pointer;
-                    transition: 0.1s;
-                    border: 1px solid var(--btn-border);
-                `;
-                resultItem.innerHTML = `
-                    <div style="font-weight: 600; color: var(--accent); font-size: 0.75rem; margin-bottom: 4px;">${result.blockName}</div>
-                    <div style="font-weight: 500;">${result.title}</div>
-                `;
-                resultItem.addEventListener('click', () => {
-                    openModal(result.title, result.variants, result.blockKey, result.title);
-                });
-                resultItem.addEventListener('mouseenter', () => {
-                    resultItem.style.backgroundColor = 'var(--btn-hover)';
-                    resultItem.style.transform = 'translateX(4px)';
-                });
-                resultItem.addEventListener('mouseleave', () => {
-                    resultItem.style.backgroundColor = 'var(--btn-bg)';
-                    resultItem.style.transform = 'translateX(0)';
-                });
-                resultsList.appendChild(resultItem);
-            });
-            
+        if (results.length === 0) {
+            resultsList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary);">😕 Ничего не найдено</div>';
             resultsPanel.style.display = 'block';
+            return;
         }
         
-        // Перехватываем поиск
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            // Сохраняем оригинальный обработчик
-            const originalHandler = searchInput.oninput;
+        resultsList.innerHTML = '';
+        results.forEach(result => {
+            const resultItem = document.createElement('div');
+            resultItem.style.cssText = `
+                padding: 10px 14px;
+                background: var(--btn-bg);
+                border-radius: 16px;
+                cursor: pointer;
+                transition: 0.1s;
+                border: 1px solid var(--btn-border);
+            `;
+            resultItem.innerHTML = `
+                <div style="font-weight: 600; color: var(--accent); font-size: 0.75rem; margin-bottom: 4px;">${result.blockName}</div>
+                <div style="font-weight: 500;">${escapeHtml(result.title)}</div>
+            `;
+           resultItem.addEventListener('click', () => {
+    if (result.isCustom) {
+        openCustomModal({ title: result.title, text: result.variants[0] }, result.customIndex);
+    } else {
+        openModal(result.title, result.variants, result.blockKey, result.title);
+    }
+});
+            resultItem.addEventListener('mouseenter', () => {
+                resultItem.style.backgroundColor = 'var(--btn-hover)';
+                resultItem.style.transform = 'translateX(4px)';
+            });
+            resultItem.addEventListener('mouseleave', () => {
+                resultItem.style.backgroundColor = 'var(--btn-bg)';
+                resultItem.style.transform = 'translateX(0)';
+            });
+            resultsList.appendChild(resultItem);
+        });
+        
+        resultsPanel.style.display = 'block';
+    }
+    
+    // Основной обработчик поиска
+    const searchInputElem = document.getElementById('searchInput');
+    if (searchInputElem) {
+        searchInputElem.addEventListener('input', (e) => {
+            const query = e.target.value;
+            searchQuery = query;
             
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value;
+            if (query.trim() !== '') {
+                globalSearchActive = true;
                 const results = searchAllTemplates(query);
                 displayResults(results);
-                
-                // Также запускаем оригинальный поиск по блокам для обратной совместимости
-                if (originalHandler) originalHandler(e);
-                else if (typeof renderAll === 'function') {
-                    window.searchQuery = query;
-                    renderAll();
-                }
-            });
-        }
-    })();
-    
-    function renderAll() {
-        renderBlock(incomingGrid, templatesData.incoming, 'incoming');
-        renderBlock(agentGrid, templatesData.agent, 'agent');
-        renderBlock(sellerGrid, templatesData.seller, 'seller');
-        renderBlock(leadGrid, templatesData.lead, 'lead');
-        renderFavorites();
-        renderCustom();
-        renderStats();
+            } else {
+                globalSearchActive = false;
+                closeSearchPanel();
+            }
+        });
     }
+})();
+
+function renderAll() {
+    // Если активен глобальный поиск — не фильтруем блоки
+    if (globalSearchActive) return;
     
-    searchInput.addEventListener('input', (e) => { searchQuery = e.target.value; renderAll(); });
+    renderBlock(incomingGrid, templatesData.incoming, 'incoming');
+    renderBlock(agentGrid, templatesData.agent, 'agent');
+    renderBlock(sellerGrid, templatesData.seller, 'seller');
+    renderBlock(leadGrid, templatesData.lead, 'lead');
+    renderFavorites();
+    renderCustom();
+    renderStats();
+}
     
     function applyTheme() {
         if (darkMode) { document.body.classList.add('dark'); themeToggle.innerHTML = '☀️ Светлая тема'; }
@@ -1360,27 +1382,10 @@
             micButton.title = 'Голосовой поиск (нажмите и говорите)';
         };
     })();
-   // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
+       // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
     
-    // Функция для сохранения истории копирований (вызывается при каждом копировании)
-    function logCopyEvent(templateName, block) {
-        const history = JSON.parse(localStorage.getItem('copyHistory') || '[]');
-        history.push({
-            date: new Date().toISOString(),
-            template: templateName,
-            block: block
-        });
-        if (history.length > 2000) history.shift();
-        localStorage.setItem('copyHistory', JSON.stringify(history));
-    }
-    
-    // Перехватываем оригинальную функцию incrementCounter, чтобы логировать копирования
-    const originalIncrementForLog = incrementCounter;
-    incrementCounter = function(block, title, variantIndex) {
-        originalIncrementForLog(block, title, variantIndex);
-        logCopyEvent(title, block);
-    };
-    
+// Функция для сохранения истории копирований
+   
     function showAdminDashboard() {
         const password = prompt('Введите пароль для доступа к панели руководителя:');
         if (password !== 'admin123') {
@@ -1531,11 +1536,15 @@
         adminDashboardModal.style.display = 'flex';
     }
     
-    // Крестик закрытия
+    // ПОЛУЧАЕМ КНОПКУ (важно: после того как DOM загружен)
+    const adminDashboardBtn = document.getElementById('adminDashboardBtn');
+    const adminDashboardModal = document.getElementById('adminDashboardModal');
     const closeDashboardBtn = document.getElementById('closeAdminDashboardBtn');
+    
+    // Крестик закрытия
     if (closeDashboardBtn) {
         closeDashboardBtn.addEventListener('click', () => {
-            adminDashboardModal.style.display = 'none';
+            if (adminDashboardModal) adminDashboardModal.style.display = 'none';
         });
     }
     
