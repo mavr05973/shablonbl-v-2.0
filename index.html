@@ -1533,46 +1533,46 @@ function showAdminDashboard() {
         }
     });
     
-    // Показываем модальное окно
-    const modal = document.getElementById('adminDashboardModal');
-    if (modal) {
-        modal.style.display = 'flex';
-    }
+    // Модальное окно будет показано из обёртки
+}
 }
 
 // ========== УПРАВЛЕНИЕ МОДАЛЬНЫМ ОКНОМ РУКОВОДИТЕЛЯ ==========
-
-// Получаем элементы
-const adminModalElement = document.getElementById('adminDashboardModal');
-const closeBtn = document.getElementById('closeAdminDashboardBtn');
-
-// Удаляем все старые обработчики (если были)
-if (closeBtn) {
-    // Создаём новый обработчик
-    closeBtn.onclick = null;
-    closeBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (adminModalElement) {
-            adminModalElement.style.display = 'none';
-        }
-    });
-}
-
-// Закрытие по клику на фон
-if (adminModalElement) {
-    adminModalElement.onclick = null;
-    adminModalElement.addEventListener('click', function(e) {
-        if (e.target === adminModalElement) {
-            adminModalElement.style.display = 'none';
-        }
-    });
-}
-
-// Кнопка открытия (один раз)
-if (adminDashboardBtn) {
-    adminDashboardBtn.onclick = null;
-    adminDashboardBtn.addEventListener('click', showAdminDashboard);
-}
+(function() {
+    // Получаем элементы
+    const modal = document.getElementById('adminDashboardModal');
+    const closeBtn = document.getElementById('closeAdminDashboardBtn');
+    const openBtn = document.getElementById('adminDashboardBtn');
+    
+    // Функция закрытия
+    function closeModal() {
+        if (modal) modal.style.display = 'none';
+    }
+    
+    // Функция открытия (вызывается из showAdminDashboard)
+    window.showAdminDashboardOriginal = showAdminDashboard;
+    window.showAdminDashboard = function() {
+        window.showAdminDashboardOriginal();
+        if (modal) modal.style.display = 'flex';
+    };
+    
+    // Вешаем события
+    if (closeBtn) {
+        closeBtn.onclick = closeModal;
+    }
+    
+    if (modal) {
+        modal.onclick = function(e) {
+            if (e.target === modal) closeModal();
+        };
+    }
+    
+    if (openBtn) {
+        openBtn.onclick = function() {
+            window.showAdminDashboard();
+        };
+    }
+})();
 
 renderAll();
 </script>
