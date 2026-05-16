@@ -1348,7 +1348,7 @@
             micButton.title = 'Голосовой поиск (нажмите и говорите)';
         };
     })();
-      // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
+    // ========== ДАШБОРД РУКОВОДИТЕЛЯ ==========
     function showAdminDashboard() {
         const password = prompt('Введите пароль для доступа к панели руководителя:');
         if (password !== 'admin123') {
@@ -1357,22 +1357,19 @@
         }
         
         const totalCopies = Object.values(counters).reduce((a, b) => a + b, 0);
-        const topTemplates = [];
-        for (const [key, value] of Object.entries(counters)) {
-            let title = key;
-            if (key.startsWith('custom_')) title = `✏️ ${key.replace('custom_', '')}`;
-            else if (key.includes('_var')) continue;
-            else title = key.split('_').slice(1).join('_');
-            topTemplates.push({ title, count: value });
-        }
-        topTemplates.sort((a, b) => b.count - a.count);
-        const top10 = topTemplates.slice(0, 10);
+        
+        // Собираем топ шаблонов
+        const allTemplates = [];
+        templatesData.incoming.forEach(item => { allTemplates.push({ name: `📨 ${item.title}`, count: getTotalCount('incoming', item.title) }); });
+        templatesData.agent.forEach(item => { allTemplates.push({ name: `🤝 ${item.title}`, count: getTotalCount('agent', item.title) }); });
+        templatesData.seller.forEach(item => { allTemplates.push({ name: `🏢 ${item.title}`, count: getTotalCount('seller', item.title) }); });
+        templatesData.lead.forEach(item => { allTemplates.push({ name: `📌 ${item.title}`, count: getTotalCount('lead', item.title) }); });
+        customTemplates.forEach(tpl => { allTemplates.push({ name: `✏️ ${tpl.title}`, count: counters[`custom_${tpl.title}`] || 0 }); });
+        allTemplates.sort((a, b) => b.count - a.count);
+        const top10 = allTemplates.slice(0, 10);
         
         const container = document.getElementById('adminDashboardContainer');
-        if (!container) {
-            console.error('adminDashboardContainer не найден');
-            return;
-        }
+        if (!container) return;
         
         container.innerHTML = `
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
@@ -1382,7 +1379,7 @@
                 </div>
                 <div style="background: var(--stat-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border);">
                     <div style="font-size: 0.85rem; color: var(--text-secondary);">📁 Всего шаблонов</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${templatesData.agent.length + templatesData.seller.length + templatesData.lead.length + templatesData.incoming.length + customTemplates.length}</div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">${allTemplates.length}</div>
                 </div>
                 <div style="background: var(--stat-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border);">
                     <div style="font-size: 0.85rem; color: var(--text-secondary);">⭐ Избранных шаблонов</div>
@@ -1396,7 +1393,7 @@
             <div class="stats-category" style="margin-top: 20px;">
                 <div class="stats-category-title">🏆 Топ-10 самых копируемых шаблонов</div>
                 <ul style="list-style: none; padding: 0;">
-                    ${top10.map(t => `<li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);"><span>${escapeHtml(t.title)}</span><span class="stat-count">${t.count}</span></li>`).join('')}
+                    ${top10.map(t => `<li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);"><span>${escapeHtml(t.name)}</span><span class="stat-count">${t.count}</span></li>`).join('')}
                     ${top10.length === 0 ? '<li>Нет данных</li>' : ''}
                 </ul>
             </div>
@@ -1408,14 +1405,9 @@
         const exportBtn = document.getElementById('exportStatsBtn');
         if (exportBtn) {
             exportBtn.addEventListener('click', () => {
-                // Добавляем BOM для правильной кодировки UTF-8
                 let csv = "\uFEFFШаблон,Количество копирований\n";
-                for (const [key, value] of Object.entries(counters)) {
-                    let title = key;
-                    if (key.startsWith('custom_')) title = `Свой: ${key.replace('custom_', '')}`;
-                    else if (key.includes('_var')) continue;
-                    else title = key.split('_').slice(1).join('_');
-                    csv += `"${title}",${value}\n`;
+                for (const t of allTemplates) {
+                    csv += `"${t.name}",${t.count}\n`;
                 }
                 const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
                 const link = document.createElement('a');
@@ -1433,20 +1425,15 @@
         adminDashboardModal.style.display = 'flex';
     }
     
-    // Обработчики для модального окна (работа с крестиком)
+    // Обработчики для модального окна
     if (adminDashboardBtn) {
-        // Удаляем старые обработчики, чтобы не было дублей
-        const newBtn = adminDashboardBtn.cloneNode(true);
-        adminDashboardBtn.parentNode.replaceChild(newBtn, adminDashboardBtn);
-        newBtn.addEventListener('click', showAdminDashboard);
+        adminDashboardBtn.addEventListener('click', showAdminDashboard);
     }
-    
     if (closeAdminModal) {
         closeAdminModal.addEventListener('click', () => {
             adminDashboardModal.style.display = 'none';
         });
     }
-    
     if (adminDashboardModal) {
         adminDashboardModal.addEventListener('click', (e) => {
             if (e.target === adminDashboardModal) {
