@@ -1563,7 +1563,34 @@ if (adminDashboardBtn) {
         showAdminDashboard();
     };
 }
-
+// ========== ПРИНУДИТЕЛЬНАЯ ПЕРЕЗАПИСЬ ОБРАБОТЧИКОВ ==========
+setTimeout(function() {
+    // Крестик закрытия
+    var closeBtn = document.getElementById('closeAdminDashboardBtn');
+    var modalWindow = document.getElementById('adminDashboardModal');
+    
+    if (closeBtn) {
+        // Удаляем все старые обработчики
+        closeBtn.removeEventListener('click', closeBtn.click);
+        closeBtn.onclick = null;
+        // Вешаем новый
+        closeBtn.onclick = function(e) {
+            e.stopPropagation();
+            if (modalWindow) modalWindow.style.display = 'none';
+            console.log('Крестик сработал!');
+        };
+    }
+    
+    // Закрытие по фону
+    if (modalWindow) {
+        modalWindow.onclick = null;
+        modalWindow.onclick = function(e) {
+            if (e.target === modalWindow) {
+                modalWindow.style.display = 'none';
+            }
+        };
+    }
+}, 100);
 renderAll();
 </script>
 <!-- Модальное окно для дашборда руководителя -->
