@@ -1541,9 +1541,7 @@ function showAdminDashboard() {
 }
 
 // ПОЛУЧАЕМ КНОПКИ (важно: после того как DOM загружен)
-const adminDashboardBtn = document.getElementById('adminDashboardBtn');
 const closeDashboardBtn = document.getElementById('closeAdminDashboardBtn');
-const adminDashboardModal = document.getElementById('adminDashboardModal');
 
 // Крестик закрытия
 if (closeDashboardBtn && adminDashboardModal) {
@@ -1561,11 +1559,11 @@ if (adminDashboardModal) {
     });
 }
 
-// Кнопка открытия
+// Кнопка открытия (админ кнопка уже объявлена выше)
 if (adminDashboardBtn) {
     adminDashboardBtn.addEventListener('click', showAdminDashboard);
 }
-    renderAll();
+renderAll();
 </script>
 <!-- Модальное окно для дашборда руководителя -->
 <div id="adminDashboardModal" class="modal-overlay">
