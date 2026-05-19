@@ -1664,22 +1664,72 @@ setTimeout(function() {
         };
     }
 }, 100);
-    // ========== AI-ПОДСКАЗКИ ==========
+   // ========== AI-ПОДСКАЗКИ (КОНТЕКСТНЫЕ) ==========
 function showAISuggestion() {
-    const suggestions = [
-        "💡 Попробуй использовать более личный подход: обратись к клиенту по имени",
-        "💡 Добавь конкретные преимущества: 'Безопасная сделка через Авито'",
-        "💡 Укажи точные сроки: 'Свяжусь с вами в течение 15 минут'",
-        "💡 Используй вопрос в конце сообщения — это повышает ответ",
-        "💡 Добавь эмодзи для привлечения внимания, но не переусердствуй"
-    ];
-    const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+    // Получаем текст текущего шаблона
+    let templateText = '';
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) {
+        const title = modalTitle.innerText;
+        // Ищем шаблон по названию
+        for (const block of [templatesData.incoming, templatesData.agent, templatesData.seller, templatesData.lead]) {
+            const found = block.find(item => item.title === title);
+            if (found && found.variants && found.variants[0]) {
+                templateText = found.variants[0];
+                break;
+            }
+        }
+    }
+    
+    // Контекстные подсказки (зависят от содержимого шаблона)
+    let suggestion = "";
+    
+    if (templateText.includes('ИМЯ') || templateText.includes('имя')) {
+        suggestion = "💡 Замените ИМЯ на реальное имя клиента — это повышает доверие";
+    }
+    else if (templateText.includes('АДРЕС') || templateText.includes('адрес')) {
+        suggestion = "📍 Укажите точный адрес: улицу, дом, подъезд, этаж";
+    }
+    else if (templateText.includes('статус') || templateText.includes('СТАТУС')) {
+        suggestion = "📌 Уточните статус сделки: 'Встреча', 'Задаток' или 'Продано'";
+    }
+    else if (templateText.includes('звонок') || templateText.includes('позвонить')) {
+        suggestion = "📞 Лучшее время для звонка — с 10:00 до 12:00 или с 15:00 до 17:00";
+    }
+    else if (templateText.includes('архив') || templateText.includes('Архивация')) {
+        suggestion = "📁 Архивация объявления занимает 1-3 рабочих дня";
+    }
+    else if (templateText.includes('модерация') || templateText.includes('Модерация')) {
+        suggestion = "⏳ Модерация объявления обычно занимает до 24 часов";
+    }
+    else if (templateText.includes('задаток') || templateText.includes('Задаток')) {
+        suggestion = "💰 Задаток фиксирует намерения покупателя и защищает продавца";
+    }
+    else if (templateText.includes('продано') || templateText.includes('Продано')) {
+        suggestion = "🎉 Поздравьте клиента и попросите отзыв — это повышает рейтинг";
+    }
+    else if (templateText.includes('отказ') || templateText.includes('Отказ')) {
+        suggestion = "🤝 При отказе сохраните контакт: клиент может вернуться позже";
+    }
+    else {
+        // Универсальные подсказки
+        const universal = [
+            "💡 Используйте вопрос в конце сообщения — это повышает ответ",
+            "💡 Добавьте эмодзи для привлечения внимания, но не переусердствуйте",
+            "💡 Укажите конкретные сроки: 'Свяжусь в течение 15 минут'",
+            "💡 Напомните о бесплатности услуги",
+            "💡 Обращайтесь к клиенту по имени — это располагает"
+        ];
+        suggestion = universal[Math.floor(Math.random() * universal.length)];
+    }
+    
+    // Показываем подсказку
     const div = document.createElement('div');
     div.style.cssText = `position:fixed; bottom:100px; right:20px; background:var(--accent); color:white; padding:12px 20px; border-radius:50px; font-size:0.9rem; z-index:999999; box-shadow:0 4px 15px rgba(0,0,0,0.3); cursor:pointer; max-width:300px;`;
-    div.innerHTML = `${randomSuggestion}<br><small style="opacity:0.8;">🔘 Нажмите, чтобы закрыть</small>`;
+    div.innerHTML = `${suggestion}<br><small style="opacity:0.8;">🔘 Нажмите, чтобы закрыть</small>`;
     div.onclick = () => div.remove();
     document.body.appendChild(div);
-    setTimeout(() => div.remove(), 8000);
+    setTimeout(() => { if(div.remove) div.remove(); }, 8000);
 }
 
 // Вызываем при открытии модального окна
