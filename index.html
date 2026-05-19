@@ -893,12 +893,79 @@ function incrementCounter(block, title, variantIndex) {
     
     function escapeHtml(str) { return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
     
-    async function copyToClipboard(text) {
+   async function copyToClipboard(text) {
+    if (!text) return;
+    
+    // Проверяем наличие переменных ИМЯ, АДРЕС, СТАТУС
+    const hasName = /\bИМЯ\b/i.test(text);
+    const hasAddress = /\bАДРЕС\b/i.test(text);
+    const hasStatus = /\bСТАТУС\b/i.test(text);
+    
+    if (hasName || hasAddress || hasStatus) {
+        // Показываем форму для ввода переменных
+        const mainModal = document.getElementById('modalRoot');
+        if (mainModal) mainModal.style.display = 'none';
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:9999999;`;
+        
+        let inputsHtml = '';
+        if (hasName) inputsHtml += `<input type="text" id="varName" placeholder="👤 Имя клиента" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:1rem;">`;
+        if (hasAddress) inputsHtml += `<input type="text" id="varAddress" placeholder="📍 Адрес объекта" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:1rem;">`;
+        if (hasStatus) inputsHtml += `<input type="text" id="varStatus" placeholder="📌 Статус (Встреча/Задаток/Продано)" style="width:100%; padding:12px; margin-bottom:20px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:1rem;">`;
+        
+        modal.innerHTML = `
+            <div style="background:var(--bg-card); max-width:400px; width:90%; border-radius:24px; padding:20px;">
+                <h3 style="margin-bottom:16px;">✏️ Заполните переменные</h3>
+                ${inputsHtml}
+                <div style="display:flex; gap:12px; justify-content:flex-end;">
+                    <button id="cancelBtn" style="padding:10px 20px; border-radius:40px; border:1px solid var(--border); background:var(--btn-bg); cursor:pointer;">Отмена</button>
+                    <button id="applyBtn" style="padding:10px 20px; border-radius:40px; background:var(--accent); color:white; border:none; cursor:pointer;">Применить</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        const nameInput = hasName ? document.getElementById('varName') : null;
+        const addressInput = hasAddress ? document.getElementById('varAddress') : null;
+        const statusInput = hasStatus ? document.getElementById('varStatus') : null;
+        const cancelBtn = document.getElementById('cancelBtn');
+        const applyBtn = document.getElementById('applyBtn');
+        
+        const closeModal = () => {
+            modal.remove();
+            if (mainModal) mainModal.style.display = 'flex';
+        };
+        
+        cancelBtn.onclick = closeModal;
+        applyBtn.onclick = () => {
+            let result = text;
+            if (nameInput && nameInput.value.trim()) {
+                result = result.replace(/\bИМЯ\b/gi, nameInput.value.trim());
+                result = result.replace(/\{ИМЯ\}/gi, nameInput.value.trim());
+            }
+            if (addressInput && addressInput.value.trim()) {
+                result = result.replace(/\bАДРЕС\b/gi, addressInput.value.trim());
+                result = result.replace(/\{АДРЕС\}/gi, addressInput.value.trim());
+            }
+            if (statusInput && statusInput.value.trim()) {
+                result = result.replace(/\bСТАТУС\b/gi, statusInput.value.trim());
+                result = result.replace(/\{СТАТУС\}/gi, statusInput.value.trim());
+            }
+            navigator.clipboard.writeText(result).then(() => {
+                showToast('📋 Скопировано с заменой переменных!');
+            }).catch(() => showToast('❌ Ошибка копирования'));
+            closeModal();
+        };
+        modal.onclick = (e) => { if(e.target === modal) closeModal(); };
+    } else {
+        // Нет переменных — обычное копирование
         try {
             await navigator.clipboard.writeText(text);
-            showToast('📋 Скопировано! Замените {ИМЯ} и {АДРЕС}');
+            showToast('📋 Скопировано!');
         } catch(e) { showToast('❌ Ошибка копирования'); }
     }
+}
     
     function closeModalFunc() { modal.style.display = 'none'; }
     closeModalBtn.onclick = closeModalFunc;
@@ -1591,17 +1658,14 @@ setTimeout(function() {
         };
     }
 }, 100);
-// ========== AI-ПОДСКАЗКИ И ВСТАВКА ПЕРЕМЕННЫХ (ПРОСТАЯ РАБОЧАЯ ВЕРСИЯ) ==========
-
-// AI-подсказки
+    // ========== AI-ПОДСКАЗКИ ==========
 function showAISuggestion() {
     const suggestions = [
         "💡 Попробуй использовать более личный подход: обратись к клиенту по имени",
         "💡 Добавь конкретные преимущества: 'Безопасная сделка через Авито'",
         "💡 Укажи точные сроки: 'Свяжусь с вами в течение 15 минут'",
         "💡 Используй вопрос в конце сообщения — это повышает ответ",
-        "💡 Добавь эмодзи для привлечения внимания, но не переусердствуй",
-        "💡 Напомни о бесплатности услуги: 'Консультация без оплаты'"
+        "💡 Добавь эмодзи для привлечения внимания, но не переусердствуй"
     ];
     const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
     const div = document.createElement('div');
@@ -1609,137 +1673,15 @@ function showAISuggestion() {
     div.innerHTML = `${randomSuggestion}<br><small style="opacity:0.8;">🔘 Нажмите, чтобы закрыть</small>`;
     div.onclick = () => div.remove();
     document.body.appendChild(div);
-    setTimeout(() => { if(div.remove) div.remove(); }, 8000);
+    setTimeout(() => div.remove(), 8000);
 }
 
-// Функция для показа формы ввода переменных
-function showVariableInputs(text, onComplete) {
-    // Проверяем какие переменные есть в тексте
-    const hasName = /\bИМЯ\b/i.test(text);
-    const hasAddress = /\bАДРЕС\b/i.test(text);
-    const hasStatus = /\bСТАТУС\b/i.test(text);
-    
-    // Закрываем основное модальное окно
-    const mainModal = document.getElementById('modalRoot');
-    if (mainModal) {
-        mainModal.style.display = 'none';
-    }
-    
-    // Создаём форму
-    const modal = document.createElement('div');
-    modal.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:9999999;`;
-    
-    let inputsHtml = '';
-    if (hasName) {
-        inputsHtml += `<input type="text" id="varName" placeholder="👤 Имя клиента" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:1rem;">`;
-    }
-    if (hasAddress) {
-        inputsHtml += `<input type="text" id="varAddress" placeholder="📍 Адрес объекта" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:1rem;">`;
-    }
-    if (hasStatus) {
-        inputsHtml += `<input type="text" id="varStatus" placeholder="📌 Статус (Встреча/Задаток/Продано)" style="width:100%; padding:12px; margin-bottom:20px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:1rem;">`;
-    }
-    
-    modal.innerHTML = `
-        <div style="background:var(--bg-card); max-width:400px; width:90%; border-radius:24px; padding:20px; box-shadow:0 20px 40px rgba(0,0,0,0.3);">
-            <h3 style="margin-bottom:16px; color:var(--accent);">✏️ Заполните переменные</h3>
-            ${inputsHtml}
-            <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:10px;">
-                <button id="cancelVarBtn" style="padding:10px 24px; border-radius:40px; border:1px solid var(--border); background:var(--btn-bg); cursor:pointer; font-size:0.9rem;">Отмена</button>
-                <button id="applyVarBtn" style="padding:10px 24px; border-radius:40px; background:var(--accent); color:white; border:none; cursor:pointer; font-size:0.9rem;">✓ Применить</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    
-    const nameInput = hasName ? document.getElementById('varName') : null;
-    const addressInput = hasAddress ? document.getElementById('varAddress') : null;
-    const statusInput = hasStatus ? document.getElementById('varStatus') : null;
-    const cancelBtn = document.getElementById('cancelVarBtn');
-    const applyBtn = document.getElementById('applyVarBtn');
-    
-    const closeModal = () => {
-        modal.remove();
-        if (mainModal) {
-            mainModal.style.display = 'flex';
-        }
-    };
-    
-    cancelBtn.onclick = closeModal;
-    applyBtn.onclick = () => {
-        let result = text;
-        if (nameInput && nameInput.value.trim()) {
-            result = result.replace(/\bИМЯ\b/gi, nameInput.value.trim());
-            result = result.replace(/\{ИМЯ\}/gi, nameInput.value.trim());
-        }
-        if (addressInput && addressInput.value.trim()) {
-            result = result.replace(/\bАДРЕС\b/gi, addressInput.value.trim());
-            result = result.replace(/\{АДРЕС\}/gi, addressInput.value.trim());
-        }
-        if (statusInput && statusInput.value.trim()) {
-            result = result.replace(/\bСТАТУС\b/gi, statusInput.value.trim());
-            result = result.replace(/\{СТАТУС\}/gi, statusInput.value.trim());
-        }
-        onComplete(result);
-        closeModal();
-        
-        // Показываем уведомление
-        const toast = document.createElement('div');
-        toast.textContent = '📋 Скопировано с заменой переменных!';
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--accent);
-            color: white;
-            padding: 10px 24px;
-            border-radius: 50px;
-            font-size: 0.9rem;
-            z-index: 9999999;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            white-space: nowrap;
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2000);
-    };
-    modal.onclick = (e) => { if(e.target === modal) closeModal(); };
-}
-
-// Сохраняем оригинальную функцию показа уведомления
-const originalShowToast = showToast;
-
-// Переопределяем copyToClipboard
-const originalCopy = copyToClipboard;
-copyToClipboard = function(text) {
-    if (!text) return;
-    
-    // Проверяем наличие переменных
-    if (/\bИМЯ\b/i.test(text) || /\bАДРЕС\b/i.test(text) || /\bСТАТУС\b/i.test(text)) {
-        showVariableInputs(text, function(finalText) {
-            // Копируем финальный текст
-            navigator.clipboard.writeText(finalText).then(() => {
-                originalShowToast('📋 Скопировано!');
-                // Обновляем статистику
-                incrementCounter('custom', 'copied', 0);
-                renderAll();
-                renderStats();
-            }).catch(() => {
-                originalShowToast('❌ Ошибка копирования');
-            });
-        });
-    } else {
-        originalCopy(text);
-    }
-};
-
-// AI-подсказка при открытии модального окна
+// Вызываем при открытии модального окна
 const originalOpen = openModal;
 openModal = function(title, variants, block, originalTitle) {
     setTimeout(() => showAISuggestion(), 300);
     originalOpen(title, variants, block, originalTitle);
 };
-
 renderAll();
 
 </script>
