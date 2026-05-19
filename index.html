@@ -1591,7 +1591,7 @@ setTimeout(function() {
         };
     }
 }, 100);
- // ========== AI-ПОДСКАЗКИ И ВСТАВКА ПЕРЕМЕННЫХ (УПРОЩЁННАЯ ВЕРСИЯ) ==========
+// ========== AI-ПОДСКАЗКИ И ВСТАВКА ПЕРЕМЕННЫХ (С ПОДДЕРЖКОЙ СТАТУСА) ==========
 
 // AI-подсказки
 function showAISuggestion() {
@@ -1612,15 +1612,16 @@ function showAISuggestion() {
     setTimeout(() => { if(div.remove) div.remove(); }, 8000);
 }
 
-// Вставка переменных
+// Вставка переменных (ИМЯ, АДРЕС, СТАТУС)
 function showVariableInputs(callback) {
     const modal = document.createElement('div');
     modal.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:20000;`;
     modal.innerHTML = `
         <div style="background:var(--bg-card); max-width:400px; width:90%; border-radius:24px; padding:20px;">
             <h3 style="margin-bottom:16px;">✏️ Заполните переменные</h3>
-            <input type="text" id="varName" placeholder="Имя клиента" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
-            <input type="text" id="varAddress" placeholder="Адрес объекта" style="width:100%; padding:12px; margin-bottom:20px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
+            <input type="text" id="varName" placeholder="👤 Имя клиента" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
+            <input type="text" id="varAddress" placeholder="📍 Адрес объекта" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
+            <input type="text" id="varStatus" placeholder="📌 Статус (например: Встреча, Задаток, Продано)" style="width:100%; padding:12px; margin-bottom:20px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
             <div style="display:flex; gap:12px; justify-content:flex-end;">
                 <button id="cancelVarBtn" style="padding:8px 20px; border-radius:40px; border:1px solid var(--border); background:var(--btn-bg); cursor:pointer;">Отмена</button>
                 <button id="applyVarBtn" style="padding:8px 20px; border-radius:40px; background:var(--accent); color:white; border:none; cursor:pointer;">Применить</button>
@@ -1630,25 +1631,43 @@ function showVariableInputs(callback) {
     document.body.appendChild(modal);
     const nameInput = document.getElementById('varName');
     const addressInput = document.getElementById('varAddress');
+    const statusInput = document.getElementById('varStatus');
     const cancelBtn = document.getElementById('cancelVarBtn');
     const applyBtn = document.getElementById('applyVarBtn');
     const close = () => modal.remove();
     cancelBtn.onclick = close;
-    applyBtn.onclick = () => { callback(nameInput.value.trim(), addressInput.value.trim()); close(); };
+    applyBtn.onclick = () => { 
+        callback(nameInput.value.trim(), addressInput.value.trim(), statusInput.value.trim()); 
+        close(); 
+    };
     modal.onclick = (e) => { if(e.target === modal) close(); };
 }
 
 // Сохраняем оригинальную функцию
 const originalCopyFunc = copyToClipboard;
 
-// Переопределяем copyToClipboard
+// Переопределяем copyToClipboard (с поддержкой ИМЯ, АДРЕС, СТАТУС)
 copyToClipboard = function(text) {
     if (!text) return;
-    if (/ИМЯ/i.test(text) || /АДРЕС/i.test(text)) {
-        showVariableInputs((name, address) => {
+    const hasName = /ИМЯ/i.test(text);
+    const hasAddress = /АДРЕС/i.test(text);
+    const hasStatus = /СТАТУС/i.test(text);
+    
+    if (hasName || hasAddress || hasStatus) {
+        showVariableInputs((name, address, status) => {
             let result = text;
-            if(name) result = result.replace(/ИМЯ/gi, name).replace(/\{ИМЯ\}/gi, name);
-            if(address) result = result.replace(/АДРЕС/gi, address).replace(/\{АДРЕС\}/gi, address);
+            if(name) {
+                result = result.replace(/ИМЯ/gi, name);
+                result = result.replace(/\{ИМЯ\}/gi, name);
+            }
+            if(address) {
+                result = result.replace(/АДРЕС/gi, address);
+                result = result.replace(/\{АДРЕС\}/gi, address);
+            }
+            if(status) {
+                result = result.replace(/СТАТУС/gi, status);
+                result = result.replace(/\{СТАТУС\}/gi, status);
+            }
             originalCopyFunc(result);
         });
     } else {
