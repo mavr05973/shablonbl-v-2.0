@@ -1591,7 +1591,7 @@ setTimeout(function() {
         };
     }
 }, 100);
-// ========== AI-ПОДСКАЗКИ И ВСТАВКА ПЕРЕМЕННЫХ (С ПОДДЕРЖКОЙ СТАТУСА) ==========
+// ========== AI-ПОДСКАЗКИ И ВСТАВКА ПЕРЕМЕННЫХ (УМНАЯ) ==========
 
 // AI-подсказки
 function showAISuggestion() {
@@ -1612,16 +1612,26 @@ function showAISuggestion() {
     setTimeout(() => { if(div.remove) div.remove(); }, 8000);
 }
 
-// Вставка переменных (ИМЯ, АДРЕС, СТАТУС)
-function showVariableInputs(callback) {
+// Вставка переменных (только те, которые есть в шаблоне)
+function showVariableInputs(callback, hasName, hasAddress, hasStatus) {
     const modal = document.createElement('div');
     modal.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:20000;`;
+    
+    let inputsHtml = '';
+    if (hasName) {
+        inputsHtml += `<input type="text" id="varName" placeholder="👤 Имя клиента" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">`;
+    }
+    if (hasAddress) {
+        inputsHtml += `<input type="text" id="varAddress" placeholder="📍 Адрес объекта" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">`;
+    }
+    if (hasStatus) {
+        inputsHtml += `<input type="text" id="varStatus" placeholder="📌 Статус (например: Встреча, Задаток, Продано)" style="width:100%; padding:12px; margin-bottom:20px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">`;
+    }
+    
     modal.innerHTML = `
         <div style="background:var(--bg-card); max-width:400px; width:90%; border-radius:24px; padding:20px;">
             <h3 style="margin-bottom:16px;">✏️ Заполните переменные</h3>
-            <input type="text" id="varName" placeholder="👤 Имя клиента" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
-            <input type="text" id="varAddress" placeholder="📍 Адрес объекта" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
-            <input type="text" id="varStatus" placeholder="📌 Статус (например: Встреча, Задаток, Продано)" style="width:100%; padding:12px; margin-bottom:20px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
+            ${inputsHtml}
             <div style="display:flex; gap:12px; justify-content:flex-end;">
                 <button id="cancelVarBtn" style="padding:8px 20px; border-radius:40px; border:1px solid var(--border); background:var(--btn-bg); cursor:pointer;">Отмена</button>
                 <button id="applyVarBtn" style="padding:8px 20px; border-radius:40px; background:var(--accent); color:white; border:none; cursor:pointer;">Применить</button>
@@ -1629,16 +1639,21 @@ function showVariableInputs(callback) {
         </div>
     `;
     document.body.appendChild(modal);
-    const nameInput = document.getElementById('varName');
-    const addressInput = document.getElementById('varAddress');
-    const statusInput = document.getElementById('varStatus');
+    
+    const nameInput = hasName ? document.getElementById('varName') : null;
+    const addressInput = hasAddress ? document.getElementById('varAddress') : null;
+    const statusInput = hasStatus ? document.getElementById('varStatus') : null;
     const cancelBtn = document.getElementById('cancelVarBtn');
     const applyBtn = document.getElementById('applyVarBtn');
     const close = () => modal.remove();
+    
     cancelBtn.onclick = close;
-    applyBtn.onclick = () => { 
-        callback(nameInput.value.trim(), addressInput.value.trim(), statusInput.value.trim()); 
-        close(); 
+    applyBtn.onclick = () => {
+        const name = nameInput ? nameInput.value.trim() : '';
+        const address = addressInput ? addressInput.value.trim() : '';
+        const status = statusInput ? statusInput.value.trim() : '';
+        callback(name, address, status);
+        close();
     };
     modal.onclick = (e) => { if(e.target === modal) close(); };
 }
@@ -1646,30 +1661,34 @@ function showVariableInputs(callback) {
 // Сохраняем оригинальную функцию
 const originalCopyFunc = copyToClipboard;
 
-// Переопределяем copyToClipboard (с поддержкой ИМЯ, АДРЕС, СТАТУС)
+// Переопределяем copyToClipboard (с умным поиском переменных)
 copyToClipboard = function(text) {
     if (!text) return;
-    const hasName = /ИМЯ/i.test(text);
-    const hasAddress = /АДРЕС/i.test(text);
-    const hasStatus = /СТАТУС/i.test(text);
+    
+    // Ищем ТОЧНЫЕ вхождения переменных (отдельные слова, не внутри других слов)
+    // Используем границы слова \b
+    const hasName = /\bИМЯ\b/i.test(text);
+    const hasAddress = /\bАДРЕС\b/i.test(text);
+    const hasStatus = /\bСТАТУС\b/i.test(text);
     
     if (hasName || hasAddress || hasStatus) {
         showVariableInputs((name, address, status) => {
             let result = text;
-            if(name) {
-                result = result.replace(/ИМЯ/gi, name);
+            if (name && hasName) {
+                result = result.replace(/\bИМЯ\b/gi, name);
                 result = result.replace(/\{ИМЯ\}/gi, name);
             }
-            if(address) {
-                result = result.replace(/АДРЕС/gi, address);
+            if (address && hasAddress) {
+                result = result.replace(/\bАДРЕС\b/gi, address);
                 result = result.replace(/\{АДРЕС\}/gi, address);
             }
-            if(status) {
-                result = result.replace(/СТАТУС/gi, status);
+            if (status && hasStatus) {
+                result = result.replace(/\bСТАТУС\b/gi, status);
                 result = result.replace(/\{СТАТУС\}/gi, status);
             }
             originalCopyFunc(result);
-        });
+            showToast('📋 Скопировано с заменой переменных!');
+        }, hasName, hasAddress, hasStatus);
     } else {
         originalCopyFunc(text);
     }
