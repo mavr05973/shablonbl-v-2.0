@@ -1613,7 +1613,7 @@ function showAISuggestion() {
 }
 
 // Вставка переменных (только те, которые есть в шаблоне) - поверх всего
-function showVariableInputs(callback, hasName, hasAddress, hasStatus) {
+function showVariableInputs(callback, hasName, hasAddress, hasStatus, originalText, originalCallback) {
     // Сначала закрываем основное модальное окно, если оно открыто
     const mainModal = document.getElementById('modalRoot');
     if (mainModal) {
@@ -1665,7 +1665,45 @@ function showVariableInputs(callback, hasName, hasAddress, hasStatus) {
         const name = nameInput ? nameInput.value.trim() : '';
         const address = addressInput ? addressInput.value.trim() : '';
         const status = statusInput ? statusInput.value.trim() : '';
-        callback(name, address, status);
+        
+        let result = originalText;
+        if (name && hasName) {
+            result = result.replace(/\bИМЯ\b/gi, name);
+            result = result.replace(/\{ИМЯ\}/gi, name);
+        }
+        if (address && hasAddress) {
+            result = result.replace(/\bАДРЕС\b/gi, address);
+            result = result.replace(/\{АДРЕС\}/gi, address);
+        }
+        if (status && hasStatus) {
+            result = result.replace(/\bСТАТУС\b/gi, status);
+            result = result.replace(/\{СТАТУС\}/gi, status);
+        }
+        
+        // Вызываем оригинальную функцию копирования
+        originalCallback(result);
+        
+        // Показываем плашку поверх всего
+        const toast = document.createElement('div');
+        toast.textContent = '📋 Скопировано с заменой переменных!';
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            z-index: 9999999;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            animation: fadeOut 2s ease forwards;
+            white-space: nowrap;
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+        
         close();
     };
     modal.onclick = (e) => { if(e.target === modal) close(); };
@@ -1684,52 +1722,7 @@ copyToClipboard = function(text) {
     const hasStatus = /\bСТАТУС\b/i.test(text);
     
     if (hasName || hasAddress || hasStatus) {
-        showVariableInputs((name, address, status) => {
-            let result = text;
-            if (name && hasName) {
-                result = result.replace(/\bИМЯ\b/gi, name);
-                result = result.replace(/\{ИМЯ\}/gi, name);
-            }
-            if (address && hasAddress) {
-                result = result.replace(/\bАДРЕС\b/gi, address);
-                result = result.replace(/\{АДРЕС\}/gi, address);
-            }
-            if (status && hasStatus) {
-                result = result.replace(/\bСТАТУС\b/gi, status);
-                result = result.replace(/\{СТАТУС\}/gi, status);
-            }
-            // Копируем результат
-            navigator.clipboard.writeText(result).then(() => {
-                // Создаём плашку поверх всего
-                const toast = document.createElement('div');
-                toast.textContent = '📋 Скопировано с заменой переменных!';
-                toast.style.cssText = `
-                    position: fixed;
-                    bottom: 30px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    background: var(--accent);
-                    color: white;
-                    padding: 10px 24px;
-                    border-radius: 50px;
-                    font-size: 0.9rem;
-                    z-index: 9999999;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                    animation: fadeOut 2s ease forwards;
-                    white-space: nowrap;
-                `;
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 2000);
-                
-                // Обновляем статистику
-                const key = `last_copied`;
-                if (typeof incrementCounter === 'function') {
-                    // тут можно обновить счётчик, если нужно
-                }
-            }).catch(() => {
-                showToast('❌ Ошибка копирования');
-            });
-        }, hasName, hasAddress, hasStatus);
+        showVariableInputs(null, hasName, hasAddress, hasStatus, text, originalCopyFunc);
     } else {
         originalCopyFunc(text);
     }
