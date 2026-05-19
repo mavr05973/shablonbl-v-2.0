@@ -1591,7 +1591,9 @@ setTimeout(function() {
         };
     }
 }, 100);
-  // ========== AI-ПОДСКАЗКИ (КАЖДЫЙ РАЗ, НА ПЕРЕДНЕМ ПЛАНЕ) ==========
+ // ========== AI-ПОДСКАЗКИ И ВСТАВКА ПЕРЕМЕННЫХ (УПРОЩЁННАЯ ВЕРСИЯ) ==========
+
+// AI-подсказки
 function showAISuggestion() {
     const suggestions = [
         "💡 Попробуй использовать более личный подход: обратись к клиенту по имени",
@@ -1599,176 +1601,70 @@ function showAISuggestion() {
         "💡 Укажи точные сроки: 'Свяжусь с вами в течение 15 минут'",
         "💡 Используй вопрос в конце сообщения — это повышает ответ",
         "💡 Добавь эмодзи для привлечения внимания, но не переусердствуй",
-        "💡 Напомни о бесплатности услуги: 'Консультация без оплаты'",
-        "💡 Уточни удобное время для звонка — клиенты это ценят",
-        "💡 Добавь конкретику: укажите площадь, этаж, инфраструктуру района",
-        "💡 Используйте слова 'уютная', 'светлая', 'свежий ремонт' для привлечения"
+        "💡 Напомни о бесплатности услуги: 'Консультация без оплаты'"
     ];
     const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
-    
-    // Создаём всплывающее окно на переднем плане
-    const suggestionDiv = document.createElement('div');
-    suggestionDiv.style.cssText = `
-        position: fixed;
-        bottom: 100px;
-        right: 20px;
-        background: var(--accent);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 50px;
-        font-size: 0.9rem;
-        z-index: 10000;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        animation: slideInRight 0.3s ease;
-        cursor: pointer;
-        max-width: 300px;
-    `;
-    suggestionDiv.innerHTML = `${randomSuggestion}<br><small style="opacity:0.8;">🔘 Нажмите, чтобы закрыть</small>`;
-    suggestionDiv.onclick = () => suggestionDiv.remove();
-    document.body.appendChild(suggestionDiv);
-    
-    // Автоматическое исчезновение через 8 секунд
-    setTimeout(() => {
-        if (suggestionDiv && suggestionDiv.remove) suggestionDiv.remove();
-    }, 8000);
+    const div = document.createElement('div');
+    div.style.cssText = `position:fixed; bottom:100px; right:20px; background:var(--accent); color:white; padding:12px 20px; border-radius:50px; font-size:0.9rem; z-index:10000; box-shadow:0 4px 15px rgba(0,0,0,0.3); cursor:pointer; max-width:300px;`;
+    div.innerHTML = `${randomSuggestion}<br><small style="opacity:0.8;">🔘 Нажмите, чтобы закрыть</small>`;
+    div.onclick = () => div.remove();
+    document.body.appendChild(div);
+    setTimeout(() => { if(div.remove) div.remove(); }, 8000);
 }
 
-// Добавляем анимацию
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-`;
-document.head.appendChild(style);
-
-// Вызываем AI-подсказку при каждом открытии модального окна
-const originalOpenModalForAI = openModal;
-window.openModal = function(title, variants, block, originalTitle) {
-    setTimeout(() => showAISuggestion(), 300);
-    originalOpenModalForAI(title, variants, block, originalTitle);
-};
-
-// ========== ВСТАВКА ПЕРЕМЕННЫХ (ИСПРАВЛЕННАЯ) ==========
-
-// Сохраняем ссылку на ОРИГИНАЛЬНУЮ функцию copyToClipboard
-const originalClipboardFunction = window.copyToClipboard || copyToClipboard;
-
+// Вставка переменных
 function showVariableInputs(callback) {
-    const variableModal = document.createElement('div');
-    variableModal.className = 'modal-overlay';
-    variableModal.style.cssText = `
-        display: flex;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.8);
-        backdrop-filter: blur(5px);
-        align-items: center;
-        justify-content: center;
-        z-index: 20000;
-    `;
-    variableModal.innerHTML = `
-        <div class="modal-card" style="max-width: 450px; width: 90%;">
-            <div class="modal-header">
-                <h3>✏️ Вставка переменных</h3>
-                <button class="close-modal" style="background: none; border: none; font-size: 28px; cursor: pointer; color: var(--text-secondary);">✕</button>
-            </div>
-            <div class="modal-body">
-                <p style="margin-bottom: 16px;">Шаблон содержит переменные. Заполните их:</p>
-                <label style="display: block; margin-bottom: 15px;">
-                    <span style="font-weight: 600; display: block; margin-bottom: 5px;">👤 Имя клиента:</span>
-                    <input type="text" id="variableName" placeholder="Например: Александр" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-size: 1rem;">
-                </label>
-                <label style="display: block; margin-bottom: 20px;">
-                    <span style="font-weight: 600; display: block; margin-bottom: 5px;">📍 Адрес объекта:</span>
-                    <input type="text" id="variableAddress" placeholder="Например: ул. Ленина, 15" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-size: 1rem;">
-                </label>
-                <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                    <button id="cancelVariablesBtn" style="padding: 10px 24px; border-radius: 40px; border: 1px solid var(--border); background: var(--btn-bg); cursor: pointer; font-size: 0.9rem;">Отмена</button>
-                    <button id="applyVariablesBtn" style="padding: 10px 24px; border-radius: 40px; background: var(--accent); color: white; border: none; cursor: pointer; font-size: 0.9rem;">✓ Применить и скопировать</button>
-                </div>
+    const modal = document.createElement('div');
+    modal.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:20000;`;
+    modal.innerHTML = `
+        <div style="background:var(--bg-card); max-width:400px; width:90%; border-radius:24px; padding:20px;">
+            <h3 style="margin-bottom:16px;">✏️ Заполните переменные</h3>
+            <input type="text" id="varName" placeholder="Имя клиента" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
+            <input type="text" id="varAddress" placeholder="Адрес объекта" style="width:100%; padding:12px; margin-bottom:20px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+                <button id="cancelVarBtn" style="padding:8px 20px; border-radius:40px; border:1px solid var(--border); background:var(--btn-bg); cursor:pointer;">Отмена</button>
+                <button id="applyVarBtn" style="padding:8px 20px; border-radius:40px; background:var(--accent); color:white; border:none; cursor:pointer;">Применить</button>
             </div>
         </div>
     `;
-    
-    document.body.appendChild(variableModal);
-    
-    const closeBtn = variableModal.querySelector('.close-modal');
-    const cancelBtn = document.getElementById('cancelVariablesBtn');
-    const applyBtn = document.getElementById('applyVariablesBtn');
-    const nameInput = document.getElementById('variableName');
-    const addressInput = document.getElementById('variableAddress');
-    
-    function closeModal() {
-        if (variableModal && variableModal.remove) variableModal.remove();
-    }
-    
-    function applyAndClose() {
-        const name = nameInput.value.trim();
-        const address = addressInput.value.trim();
-        callback(name, address);
-        closeModal();
-    }
-    
-    if (closeBtn) closeBtn.onclick = closeModal;
-    if (cancelBtn) cancelBtn.onclick = closeModal;
-    if (applyBtn) applyBtn.onclick = applyAndClose;
-    variableModal.onclick = (e) => { if (e.target === variableModal) closeModal(); };
+    document.body.appendChild(modal);
+    const nameInput = document.getElementById('varName');
+    const addressInput = document.getElementById('varAddress');
+    const cancelBtn = document.getElementById('cancelVarBtn');
+    const applyBtn = document.getElementById('applyVarBtn');
+    const close = () => modal.remove();
+    cancelBtn.onclick = close;
+    applyBtn.onclick = () => { callback(nameInput.value.trim(), addressInput.value.trim()); close(); };
+    modal.onclick = (e) => { if(e.target === modal) close(); };
 }
 
-// ПЕРЕОПРЕДЕЛЯЕМ copyToClipboard (только один раз!)
-window.copyToClipboard = async function(text) {
+// Сохраняем оригинальную функцию
+const originalCopyFunc = copyToClipboard;
+
+// Переопределяем copyToClipboard
+copyToClipboard = function(text) {
     if (!text) return;
-    
-    // Проверяем наличие переменных
-    const hasNameVariable = /ИМЯ|имя|\{ИМЯ\}/i.test(text);
-    const hasAddressVariable = /АДРЕС|адрес|\{АДРЕС\}/i.test(text);
-    
-    if (hasNameVariable || hasAddressVariable) {
+    if (/ИМЯ/i.test(text) || /АДРЕС/i.test(text)) {
         showVariableInputs((name, address) => {
-            let finalText = text;
-            
-            if (name) {
-                finalText = finalText.replace(/\{ИМЯ\}/gi, name);
-                finalText = finalText.replace(/ИМЯ/gi, name);
-            }
-            if (address) {
-                finalText = finalText.replace(/\{АДРЕС\}/gi, address);
-                finalText = finalText.replace(/АДРЕС/gi, address);
-            }
-            
-            // Используем ОРИГИНАЛЬНУЮ функцию для копирования
-            if (originalClipboardFunction) {
-                originalClipboardFunction(finalText);
-            } else {
-                // fallback
-                try {
-                    await navigator.clipboard.writeText(finalText);
-                    showToast('📋 Скопировано!');
-                } catch(e) { showToast('❌ Ошибка копирования'); }
-            }
+            let result = text;
+            if(name) result = result.replace(/ИМЯ/gi, name).replace(/\{ИМЯ\}/gi, name);
+            if(address) result = result.replace(/АДРЕС/gi, address).replace(/\{АДРЕС\}/gi, address);
+            originalCopyFunc(result);
         });
     } else {
-        // Нет переменных — копируем как есть через оригинальную функцию
-        if (originalClipboardFunction) {
-            originalClipboardFunction(text);
-        } else {
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast('📋 Скопировано!');
-            } catch(e) { showToast('❌ Ошибка копирования'); }
-        }
+        originalCopyFunc(text);
     }
 };
 
-// Убеждаемся, что функция назначена глобально
-copyToClipboard = window.copyToClipboard;
+// AI-подсказка при открытии модального окна
+const originalOpenFunc = openModal;
+openModal = function(title, variants, block, originalTitle) {
+    setTimeout(() => showAISuggestion(), 300);
+    originalOpenFunc(title, variants, block, originalTitle);
+};
 
 renderAll();
+
 </script>
 <!-- Модальное окно для дашборда руководителя -->
 <div id="adminDashboardModal" class="modal-overlay">
