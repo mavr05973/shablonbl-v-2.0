@@ -1591,7 +1591,7 @@ setTimeout(function() {
         };
     }
 }, 100);
-// ========== AI-ПОДСКАЗКИ И ВСТАВКА ПЕРЕМЕННЫХ (РАБОЧАЯ ВЕРСИЯ) ==========
+// ========== AI-ПОДСКАЗКИ И ВСТАВКА ПЕРЕМЕННЫХ (ПРОСТАЯ РАБОЧАЯ ВЕРСИЯ) ==========
 
 // AI-подсказки
 function showAISuggestion() {
@@ -1613,17 +1613,11 @@ function showAISuggestion() {
 }
 
 // Функция для показа формы ввода переменных
-function showVariableInputs(text, callback) {
+function showVariableInputs(text, onComplete) {
     // Проверяем какие переменные есть в тексте
     const hasName = /\bИМЯ\b/i.test(text);
     const hasAddress = /\bАДРЕС\b/i.test(text);
     const hasStatus = /\bСТАТУС\b/i.test(text);
-    
-    // Если нет переменных, просто копируем
-    if (!hasName && !hasAddress && !hasStatus) {
-        callback(text);
-        return;
-    }
     
     // Закрываем основное модальное окно
     const mainModal = document.getElementById('modalRoot');
@@ -1686,60 +1680,65 @@ function showVariableInputs(text, callback) {
             result = result.replace(/\bСТАТУС\b/gi, statusInput.value.trim());
             result = result.replace(/\{СТАТУС\}/gi, statusInput.value.trim());
         }
-        callback(result);
+        onComplete(result);
         closeModal();
+        
+        // Показываем уведомление
+        const toast = document.createElement('div');
+        toast.textContent = '📋 Скопировано с заменой переменных!';
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            z-index: 9999999;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
     };
     modal.onclick = (e) => { if(e.target === modal) closeModal(); };
 }
 
-// Сохраняем оригинальную функцию копирования
-const originalCopyFunction = window.copyToClipboard || copyToClipboard;
+// Сохраняем оригинальную функцию показа уведомления
+const originalShowToast = showToast;
 
-// Переопределяем функцию копирования
-window.copyToClipboard = async function(text) {
+// Переопределяем copyToClipboard
+const originalCopy = copyToClipboard;
+copyToClipboard = function(text) {
     if (!text) return;
     
     // Проверяем наличие переменных
-    const hasVariables = /\bИМЯ\b/i.test(text) || /\bАДРЕС\b/i.test(text) || /\bСТАТУС\b/i.test(text);
-    
-    if (hasVariables) {
-        showVariableInputs(text, (finalText) => {
-            originalCopyFunction(finalText);
-            // Показываем уведомление
-            const toast = document.createElement('div');
-            toast.textContent = '📋 Скопировано с заменой переменных!';
-            toast.style.cssText = `
-                position: fixed;
-                bottom: 80px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: var(--accent);
-                color: white;
-                padding: 10px 24px;
-                border-radius: 50px;
-                font-size: 0.9rem;
-                z-index: 9999999;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                white-space: nowrap;
-            `;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2000);
+    if (/\bИМЯ\b/i.test(text) || /\bАДРЕС\b/i.test(text) || /\bСТАТУС\b/i.test(text)) {
+        showVariableInputs(text, function(finalText) {
+            // Копируем финальный текст
+            navigator.clipboard.writeText(finalText).then(() => {
+                originalShowToast('📋 Скопировано!');
+                // Обновляем статистику
+                incrementCounter('custom', 'copied', 0);
+                renderAll();
+                renderStats();
+            }).catch(() => {
+                originalShowToast('❌ Ошибка копирования');
+            });
         });
     } else {
-        originalCopyFunction(text);
+        originalCopy(text);
     }
 };
 
-// Переопределяем глобальную функцию
-copyToClipboard = window.copyToClipboard;
-
 // AI-подсказка при открытии модального окна
-const originalOpenModalFunction = openModal;
-window.openModal = function(title, variants, block, originalTitle) {
+const originalOpen = openModal;
+openModal = function(title, variants, block, originalTitle) {
     setTimeout(() => showAISuggestion(), 300);
-    originalOpenModalFunction(title, variants, block, originalTitle);
+    originalOpen(title, variants, block, originalTitle);
 };
-openModal = window.openModal;
 
 renderAll();
 
