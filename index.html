@@ -1591,9 +1591,9 @@ setTimeout(function() {
         };
     }
 }, 100);
-// ========== AI-ПОДСКАЗКИ И ВСТАВКА ПЕРЕМЕННЫХ (УМНАЯ) ==========
+// ========== AI-ПОДСКАЗКИ И ВСТАВКА ПЕРЕМЕННЫХ (РАБОЧАЯ ВЕРСИЯ) ==========
 
-// AI-подсказки (высокий z-index)
+// AI-подсказки
 function showAISuggestion() {
     const suggestions = [
         "💡 Попробуй использовать более личный подход: обратись к клиенту по имени",
@@ -1612,14 +1612,26 @@ function showAISuggestion() {
     setTimeout(() => { if(div.remove) div.remove(); }, 8000);
 }
 
-// Вставка переменных (только те, которые есть в шаблоне) - поверх всего
-function showVariableInputs(callback, hasName, hasAddress, hasStatus, originalText, originalCallback) {
-    // Сначала закрываем основное модальное окно, если оно открыто
+// Функция для показа формы ввода переменных
+function showVariableInputs(text, callback) {
+    // Проверяем какие переменные есть в тексте
+    const hasName = /\bИМЯ\b/i.test(text);
+    const hasAddress = /\bАДРЕС\b/i.test(text);
+    const hasStatus = /\bСТАТУС\b/i.test(text);
+    
+    // Если нет переменных, просто копируем
+    if (!hasName && !hasAddress && !hasStatus) {
+        callback(text);
+        return;
+    }
+    
+    // Закрываем основное модальное окно
     const mainModal = document.getElementById('modalRoot');
     if (mainModal) {
         mainModal.style.display = 'none';
     }
     
+    // Создаём форму
     const modal = document.createElement('div');
     modal.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:9999999;`;
     
@@ -1631,7 +1643,7 @@ function showVariableInputs(callback, hasName, hasAddress, hasStatus, originalTe
         inputsHtml += `<input type="text" id="varAddress" placeholder="📍 Адрес объекта" style="width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:1rem;">`;
     }
     if (hasStatus) {
-        inputsHtml += `<input type="text" id="varStatus" placeholder="📌 Статус (например: Встреча, Задаток, Продано)" style="width:100%; padding:12px; margin-bottom:20px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:1rem;">`;
+        inputsHtml += `<input type="text" id="varStatus" placeholder="📌 Статус (Встреча/Задаток/Продано)" style="width:100%; padding:12px; margin-bottom:20px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:1rem;">`;
     }
     
     modal.innerHTML = `
@@ -1652,88 +1664,82 @@ function showVariableInputs(callback, hasName, hasAddress, hasStatus, originalTe
     const cancelBtn = document.getElementById('cancelVarBtn');
     const applyBtn = document.getElementById('applyVarBtn');
     
-    const close = () => {
+    const closeModal = () => {
         modal.remove();
-        // Восстанавливаем основное модальное окно
         if (mainModal) {
             mainModal.style.display = 'flex';
         }
     };
     
-    cancelBtn.onclick = close;
+    cancelBtn.onclick = closeModal;
     applyBtn.onclick = () => {
-        const name = nameInput ? nameInput.value.trim() : '';
-        const address = addressInput ? addressInput.value.trim() : '';
-        const status = statusInput ? statusInput.value.trim() : '';
-        
-        let result = originalText;
-        if (name && hasName) {
-            result = result.replace(/\bИМЯ\b/gi, name);
-            result = result.replace(/\{ИМЯ\}/gi, name);
+        let result = text;
+        if (nameInput && nameInput.value.trim()) {
+            result = result.replace(/\bИМЯ\b/gi, nameInput.value.trim());
+            result = result.replace(/\{ИМЯ\}/gi, nameInput.value.trim());
         }
-        if (address && hasAddress) {
-            result = result.replace(/\bАДРЕС\b/gi, address);
-            result = result.replace(/\{АДРЕС\}/gi, address);
+        if (addressInput && addressInput.value.trim()) {
+            result = result.replace(/\bАДРЕС\b/gi, addressInput.value.trim());
+            result = result.replace(/\{АДРЕС\}/gi, addressInput.value.trim());
         }
-        if (status && hasStatus) {
-            result = result.replace(/\bСТАТУС\b/gi, status);
-            result = result.replace(/\{СТАТУС\}/gi, status);
+        if (statusInput && statusInput.value.trim()) {
+            result = result.replace(/\bСТАТУС\b/gi, statusInput.value.trim());
+            result = result.replace(/\{СТАТУС\}/gi, statusInput.value.trim());
         }
-        
-        // Вызываем оригинальную функцию копирования
-        originalCallback(result);
-        
-        // Показываем плашку поверх всего
-        const toast = document.createElement('div');
-        toast.textContent = '📋 Скопировано с заменой переменных!';
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--accent);
-            color: white;
-            padding: 10px 24px;
-            border-radius: 50px;
-            font-size: 0.9rem;
-            z-index: 9999999;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            animation: fadeOut 2s ease forwards;
-            white-space: nowrap;
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2000);
-        
-        close();
+        callback(result);
+        closeModal();
     };
-    modal.onclick = (e) => { if(e.target === modal) close(); };
+    modal.onclick = (e) => { if(e.target === modal) closeModal(); };
 }
 
-// Сохраняем оригинальную функцию
-const originalCopyFunc = copyToClipboard;
+// Сохраняем оригинальную функцию копирования
+const originalCopyFunction = window.copyToClipboard || copyToClipboard;
 
-// Переопределяем copyToClipboard (с умным поиском переменных)
-copyToClipboard = function(text) {
+// Переопределяем функцию копирования
+window.copyToClipboard = async function(text) {
     if (!text) return;
     
-    // Ищем ТОЧНЫЕ вхождения переменных (отдельные слова, не внутри других слов)
-    const hasName = /\bИМЯ\b/i.test(text);
-    const hasAddress = /\bАДРЕС\b/i.test(text);
-    const hasStatus = /\bСТАТУС\b/i.test(text);
+    // Проверяем наличие переменных
+    const hasVariables = /\bИМЯ\b/i.test(text) || /\bАДРЕС\b/i.test(text) || /\bСТАТУС\b/i.test(text);
     
-    if (hasName || hasAddress || hasStatus) {
-        showVariableInputs(null, hasName, hasAddress, hasStatus, text, originalCopyFunc);
+    if (hasVariables) {
+        showVariableInputs(text, (finalText) => {
+            originalCopyFunction(finalText);
+            // Показываем уведомление
+            const toast = document.createElement('div');
+            toast.textContent = '📋 Скопировано с заменой переменных!';
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 80px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--accent);
+                color: white;
+                padding: 10px 24px;
+                border-radius: 50px;
+                font-size: 0.9rem;
+                z-index: 9999999;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                white-space: nowrap;
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        });
     } else {
-        originalCopyFunc(text);
+        originalCopyFunction(text);
     }
 };
 
+// Переопределяем глобальную функцию
+copyToClipboard = window.copyToClipboard;
+
 // AI-подсказка при открытии модального окна
-const originalOpenFunc = openModal;
-openModal = function(title, variants, block, originalTitle) {
+const originalOpenModalFunction = openModal;
+window.openModal = function(title, variants, block, originalTitle) {
     setTimeout(() => showAISuggestion(), 300);
-    originalOpenFunc(title, variants, block, originalTitle);
+    originalOpenModalFunction(title, variants, block, originalTitle);
 };
+openModal = window.openModal;
 
 renderAll();
 
