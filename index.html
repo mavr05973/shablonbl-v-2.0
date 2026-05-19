@@ -387,13 +387,13 @@
             "Здравствуйте, ИМЯ.\n\nНа данном этапе можно проставить статус (“указать статус”). Также прикреплю в наш чат статусную модель, возможно, будет полезно.\n\nМогу еще чем-то вам помочь?😇"
         ]},
         { title: "Архивация объявления (будни)", variants: [
-            "ИМЯ, передал /передала запрос в отдел модерации. \n\nПосле рассмотрения обращения объявление будет перемещено в архив в течение 1-3 рабочих дней. По результату архивации я или мои коллеги вернемся к вам с обратной связью. \n\nПодскажите, пожалуйста, могу еще чем-нибудь помочь?"
+            "ИМЯ, передал /передала запрос в отдел модерации. \n\nПосле рассмотрения обращения объявление будет щено в архив в течение 1-3 рабочих дней. По результату архивации я или мои коллеги вернемся к вам с обратной связью. \n\nПодскажите, пожалуйста, могу еще чем-нибудь помочь?"
         ]},
         { title: "Архивация объявления (выходные)", variants: [
-            "ИМЯ, передал/передала запрос для архивации объявления.\n\nОтдел модерации работает в графике 5/2 с 09:00 до 18:00. \nПосле рассмотрения обращения объявление будет перемещено в архив в течение 1-3 рабочих дней. По результату архивации я или мои коллеги вернемся к вам с обратной связью.\n\nПодскажите, пожалуйста, могу еще чем-нибудь помочь?"
+            "ИМЯ, передал/передала запрос для архивации объявления.\n\nОтдел модерации работает в графике 5/2 с 09:00 до 18:00. \nПосле рассмотрения обращения объявление будет щено в архив в течение 1-3 рабочих дней. По результату архивации я или мои коллеги вернемся к вам с обратной связью.\n\nПодскажите, пожалуйста, могу еще чем-нибудь помочь?"
         ]},
         { title: "Архивация объявления (успех)", variants: [
-            "ИМЯ, Добрый день! \n\nМы к вам с хорошей\\отличной\\приятной новостью.\n\nОбъявление объекта с адресом: адрес (можно по желанию ссылку), было успешно перемещено в архив. \n\nЖелаю вам отличного настроения и успешных сделок."
+            "ИМЯ, Добрый день! \n\nМы к вам с хорошей\\отличной\\приятной новостью.\n\nОбъявление объекта с адресом: адрес (можно по желанию ссылку), было успешно щено в архив. \n\nЖелаю вам отличного настроения и успешных сделок."
         ]},
         { title: "Архивация объявления (отказ из-за конкурента/собственника)", variants: [
             "Добрый день, ИМЯ!\n\nК сожалению, объявление по данному объекту: АДРЕС ИЛИ ССЫЛКА, наша модерация не смогла поместить в архив. \n\nЭто связано с тем, что КОНКУРЕНТ\\СОБСТВЕННИК прошел проверку по документам. \n\nВ данной ситуации мы можем предложить вам два решения: \n\n1. Попросить убрать объявление у конкурентов\\ собственника;\n2. Собственник должен оповестить конкурентов, что разрывает с ними отношения. Далее написать в техническую поддержку Авито с подтверждением разрыва договоренностей и просьбой снять объявление конкурента. Затем с вашей помощью прислать нам номер обращения собственника в техническую поддержку."
@@ -1650,7 +1650,11 @@ window.openModal = function(title, variants, block, originalTitle) {
     originalOpenModalForAI(title, variants, block, originalTitle);
 };
 
-// ========== ВСТАВКА ПЕРЕМЕННЫХ (ПОДДЕРЖКА {ИМЯ}, {АДРЕС} И ПРОСТО ИМЯ, АДРЕС) ==========
+// ========== ВСТАВКА ПЕРЕМЕННЫХ (ИСПРАВЛЕННАЯ) ==========
+
+// Сохраняем ссылку на ОРИГИНАЛЬНУЮ функцию copyToClipboard
+const originalClipboardFunction = window.copyToClipboard || copyToClipboard;
+
 function showVariableInputs(callback) {
     const variableModal = document.createElement('div');
     variableModal.className = 'modal-overlay';
@@ -1716,52 +1720,54 @@ function showVariableInputs(callback) {
     variableModal.onclick = (e) => { if (e.target === variableModal) closeModal(); };
 }
 
-// Переопределяем функцию copyToClipboard с поддержкой разных форматов переменных
-const originalCopyToClipboardForVars = copyToClipboard;
+// ПЕРЕОПРЕДЕЛЯЕМ copyToClipboard (только один раз!)
 window.copyToClipboard = async function(text) {
     if (!text) return;
     
-    // Проверяем наличие переменных в разных форматах:
-    // 1. {ИМЯ} и {АДРЕС} с фигурными скобками
-    // 2. ИМЯ и АДРЕС без скобок (заглавными)
-    // 3. имя и адрес (строчными)
-    const hasNameVariable = text.includes('{ИМЯ}') || text.includes('ИМЯ') || text.includes('имя');
-    const hasAddressVariable = text.includes('{АДРЕС}') || text.includes('АДРЕС') || text.includes('адрес');
+    // Проверяем наличие переменных
+    const hasNameVariable = /ИМЯ|имя|\{ИМЯ\}/i.test(text);
+    const hasAddressVariable = /АДРЕС|адрес|\{АДРЕС\}/i.test(text);
     
     if (hasNameVariable || hasAddressVariable) {
         showVariableInputs((name, address) => {
             let finalText = text;
             
-            // Заменяем все возможные форматы переменной ИМЯ
             if (name) {
-                finalText = finalText.replace(/\{ИМЯ\}/g, name);
-                finalText = finalText.replace(/ИМЯ/g, name);
-                finalText = finalText.replace(/имя/g, name);
-            } else {
-                finalText = finalText.replace(/\{ИМЯ\}/g, '{ИМЯ}');
-                finalText = finalText.replace(/ИМЯ/g, '{ИМЯ}');
-                finalText = finalText.replace(/имя/g, '{ИМЯ}');
+                finalText = finalText.replace(/\{ИМЯ\}/gi, name);
+                finalText = finalText.replace(/ИМЯ/gi, name);
             }
-            
-            // Заменяем все возможные форматы переменной АДРЕС
             if (address) {
-                finalText = finalText.replace(/\{АДРЕС\}/g, address);
-                finalText = finalText.replace(/АДРЕС/g, address);
-                finalText = finalText.replace(/адрес/g, address);
-            } else {
-                finalText = finalText.replace(/\{АДРЕС\}/g, '{АДРЕС}');
-                finalText = finalText.replace(/АДРЕС/g, '{АДРЕС}');
-                finalText = finalText.replace(/адрес/g, '{АДРЕС}');
+                finalText = finalText.replace(/\{АДРЕС\}/gi, address);
+                finalText = finalText.replace(/АДРЕС/gi, address);
             }
             
-            originalCopyToClipboardForVars(finalText);
+            // Используем ОРИГИНАЛЬНУЮ функцию для копирования
+            if (originalClipboardFunction) {
+                originalClipboardFunction(finalText);
+            } else {
+                // fallback
+                try {
+                    await navigator.clipboard.writeText(finalText);
+                    showToast('📋 Скопировано!');
+                } catch(e) { showToast('❌ Ошибка копирования'); }
+            }
         });
     } else {
-        originalCopyToClipboardForVars(text);
+        // Нет переменных — копируем как есть через оригинальную функцию
+        if (originalClipboardFunction) {
+            originalClipboardFunction(text);
+        } else {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast('📋 Скопировано!');
+            } catch(e) { showToast('❌ Ошибка копирования'); }
+        }
     }
 };
 
+// Убеждаемся, что функция назначена глобально
 copyToClipboard = window.copyToClipboard;
+
 renderAll();
 </script>
 <!-- Модальное окно для дашборда руководителя -->
