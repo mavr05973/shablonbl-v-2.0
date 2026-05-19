@@ -893,13 +893,13 @@ function incrementCounter(block, title, variantIndex) {
     
     function escapeHtml(str) { return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
     
-   async function copyToClipboard(text) {
+async function copyToClipboard(text) {
     if (!text) return;
     
-    // Проверяем наличие переменных ИМЯ, АДРЕС, СТАТУС
-    const hasName = /\bИМЯ\b/i.test(text);
-    const hasAddress = /\bАДРЕС\b/i.test(text);
-    const hasStatus = /\bСТАТУС\b/i.test(text);
+    // Проверяем наличие переменных (без \b, просто по наличию слова)
+    const hasName = text.includes('ИМЯ') || text.includes('имя');
+    const hasAddress = text.includes('АДРЕС') || text.includes('адрес');
+    const hasStatus = text.includes('СТАТУС') || text.includes('статус');
     
     if (hasName || hasAddress || hasStatus) {
         // Показываем форму для ввода переменных
@@ -941,16 +941,13 @@ function incrementCounter(block, title, variantIndex) {
         applyBtn.onclick = () => {
             let result = text;
             if (nameInput && nameInput.value.trim()) {
-                result = result.replace(/\bИМЯ\b/gi, nameInput.value.trim());
-                result = result.replace(/\{ИМЯ\}/gi, nameInput.value.trim());
+                result = result.replace(/ИМЯ/gi, nameInput.value.trim());
             }
             if (addressInput && addressInput.value.trim()) {
-                result = result.replace(/\bАДРЕС\b/gi, addressInput.value.trim());
-                result = result.replace(/\{АДРЕС\}/gi, addressInput.value.trim());
+                result = result.replace(/АДРЕС/gi, addressInput.value.trim());
             }
             if (statusInput && statusInput.value.trim()) {
-                result = result.replace(/\bСТАТУС\b/gi, statusInput.value.trim());
-                result = result.replace(/\{СТАТУС\}/gi, statusInput.value.trim());
+                result = result.replace(/СТАТУС/gi, statusInput.value.trim());
             }
             navigator.clipboard.writeText(result).then(() => {
                 showToast('📋 Скопировано с заменой переменных!');
